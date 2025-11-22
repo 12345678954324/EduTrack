@@ -1,8 +1,7 @@
-// Archivo: lib/login_page.dart
-
 import 'package:flutter/material.dart';
 import 'register_page.dart';
-import 'teacher_page.dart';
+import 'main_layout.dart'; // Layout de Alumnos
+import 'pantallasmaestros/main_layout_maestros_screen.dart'; // Layout de Maestros (IMPORTANTE)
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,19 +14,26 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  String userType = "Alumno"; // Alumno o Maestro
+  String userType = "Alumno"; // Valor inicial
 
   void login() {
-    if (userType == "Maestro") {
-      Navigator.push(
+    // Lógica de redirección basada en el tipo de usuario
+    if (userType == "Alumno") {
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const MaestrosPage()),
+        MaterialPageRoute(builder: (context) => const MainLayout()),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Inicio de sesión de alumno (sin BD)")),
+    } else if (userType == "Maestro") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
       );
     }
+
+    // Simulación de inicio de sesión exitoso
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("Bienvenido $userType")));
   }
 
   @override
@@ -52,55 +58,49 @@ class _LoginPageState extends State<LoginPage> {
             ),
             child: Column(
               children: [
-                const Text(
-                  "Bienvenido",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                Image.asset(
+                  'assets/image/logo.png',
+                  height: 100,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.school,
+                      size: 100,
+                      color: Colors.deepPurple,
+                    );
+                  },
                 ),
-
-                const SizedBox(height: 20),
-
-                // ⭐ Ícono en vez de logo
-                const Icon(
-                  Icons.school,
-                  size: 80,
-                  color: Colors.deepPurple,
-                ),
-
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 15),
                 const Text(
                   "Inicio de Sesión",
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
                 const SizedBox(height: 20),
-
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(
                     labelText: "Correo",
+                    prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 15),
-
                 TextField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: "Contraseña",
+                    prefixIcon: const Icon(Icons.lock_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 15),
 
-                DropdownButtonFormField(
+                // SELECTOR DE ROL (ALUMNO / MAESTRO)
+                DropdownButtonFormField<String>(
                   value: userType,
                   items: const [
                     DropdownMenuItem(value: "Alumno", child: Text("Alumno")),
@@ -113,14 +113,13 @@ class _LoginPageState extends State<LoginPage> {
                   },
                   decoration: InputDecoration(
                     labelText: "Tipo de usuario",
+                    prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 25),
-
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -139,9 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 TextButton(
                   onPressed: () {
                     Navigator.push(
