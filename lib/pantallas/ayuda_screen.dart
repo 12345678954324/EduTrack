@@ -6,7 +6,7 @@ class AyudaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[200],
 
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -18,7 +18,7 @@ class AyudaScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.purple,
+                color: Colors.deepPurple,
               ),
             ),
             const SizedBox(height: 10),
@@ -28,12 +28,12 @@ class AyudaScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ListTile(
-              leading: Icon(Icons.email_outlined, color: Colors.purple.shade800),
+              leading: Icon(Icons.email_outlined, color: Colors.deepPurple.shade800),
               title: const Text('Correo de soporte'),
               subtitle: const Text('soporte@colegio.com'),
             ),
             ListTile(
-              leading: Icon(Icons.phone_android, color: Colors.purple.shade800),
+              leading: Icon(Icons.phone_android, color: Colors.deepPurple.shade800),
               title: const Text('Teléfono'),
               subtitle: const Text('+52 55 1234 5678'),
             ),

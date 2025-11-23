@@ -6,7 +6,7 @@ class CalificacionesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.purple.shade50,
+      backgroundColor: Colors.grey[200],
 
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -26,7 +26,7 @@ class CalificacionesScreen extends StatelessWidget {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Icon(Icons.book, color: Colors.purple.shade700),
+        leading: Icon(Icons.book, color: Colors.deepPurple.shade700),
         title: Text(
           materia,
           style: const TextStyle(fontWeight: FontWeight.bold),

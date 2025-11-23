@@ -48,6 +48,8 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_selectedIndex]),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         elevation: 4.0,
         actions: [
           IconButton(
@@ -158,7 +160,7 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.purple.shade700, Colors.purple.shade400],
+          colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade400],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -178,8 +180,8 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
         gradient: isSelected
             ? LinearGradient(
                 colors: [
-                  Colors.purple.shade100,
-                  Colors.purple.shade50.withOpacity(0.5),
+                  Colors.deepPurple.shade100,
+                  Colors.deepPurple.shade50.withOpacity(0.5),
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -190,12 +192,12 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
       child: ListTile(
         leading: Icon(
           icon,
-          color: isSelected ? Colors.purple.shade800 : Colors.grey.shade700,
+          color: isSelected ? Colors.deepPurple.shade800 : Colors.grey.shade700,
         ),
         title: Text(
           text,
           style: TextStyle(
-            color: isSelected ? Colors.purple.shade900 : Colors.black87,
+            color: isSelected ? Colors.deepPurple.shade900 : Colors.black87,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),

@@ -21,11 +21,11 @@ class _MainLayoutState extends State<MainLayout> {
 
   // 1. LISTA DE PANTALLAS (ALUMNO)
   static final List<Widget> _widgetOptions = <Widget>[
-    InicioScreen(),
-    GruposScreen(),
+    const InicioScreen(),
+    const GruposScreen(),
     const CalendarioScreen(), // Tu nuevo calendario real
-    CalificacionesScreen(),
-    AyudaScreen(),
+    const CalificacionesScreen(),
+    const AyudaScreen(),
   ];
 
   // 2. TÍTULOS
@@ -49,6 +49,8 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_selectedIndex]),
+        backgroundColor: Colors.deepPurple,
+        foregroundColor: Colors.white,
         elevation: 4.0,
         actions: [
           IconButton(
@@ -164,7 +166,7 @@ class _MainLayoutState extends State<MainLayout> {
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.purple.shade700, Colors.purple.shade400],
+          colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade400],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -184,8 +186,8 @@ class _MainLayoutState extends State<MainLayout> {
         gradient: isSelected
             ? LinearGradient(
                 colors: [
-                  Colors.purple.shade100,
-                  Colors.purple.shade50.withOpacity(0.5),
+                  Colors.deepPurple.shade100,
+                  Colors.deepPurple.shade50.withOpacity(0.5),
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -196,12 +198,12 @@ class _MainLayoutState extends State<MainLayout> {
       child: ListTile(
         leading: Icon(
           icon,
-          color: isSelected ? Colors.purple.shade800 : Colors.grey.shade700,
+          color: isSelected ? Colors.deepPurple.shade800 : Colors.grey.shade700,
         ),
         title: Text(
           text,
           style: TextStyle(
-            color: isSelected ? Colors.purple.shade900 : Colors.black87,
+            color: isSelected ? Colors.deepPurple.shade900 : Colors.black87,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),

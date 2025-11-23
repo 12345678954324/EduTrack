@@ -17,23 +17,33 @@ class _LoginPageState extends State<LoginPage> {
   String userType = "Alumno"; // Valor inicial
 
   void login() {
-    // Lógica de redirección basada en el tipo de usuario
-    if (userType == "Alumno") {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainLayout()),
+    // Validación básica
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Por favor completa todos los campos")),
       );
-    } else if (userType == "Maestro") {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
-      );
+      return;
     }
 
-    // Simulación de inicio de sesión exitoso
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Bienvenido $userType")));
+    // Mostrar mensaje ANTES de navegar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Bienvenido $userType")),
+    );
+
+    // Lógica de redirección basada en el tipo de usuario
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (userType == "Alumno") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainLayout()),
+        );
+      } else if (userType == "Maestro") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
+        );
+      }
+    });
   }
 
   @override
@@ -58,16 +68,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
             child: Column(
               children: [
-                Image.asset(
-                  'assets/image/logo.png',
-                  height: 100,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.school,
-                      size: 100,
-                      color: Colors.deepPurple,
-                    );
-                  },
+                const Icon(
+                  Icons.school_rounded,
+                  size: 90,
+                  color: Colors.deepPurple,
                 ),
                 const SizedBox(height: 15),
                 const Text(

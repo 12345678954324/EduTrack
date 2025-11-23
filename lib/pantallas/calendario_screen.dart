@@ -65,7 +65,7 @@ class CalendarioScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Colors.grey[200],
       body: ListView.builder(
         padding: const EdgeInsets.all(16.0),
         itemCount: eventos.length,

@@ -1,8 +1,9 @@
 // Archivo: lib/register_page.dart
 
 import 'package:flutter/material.dart';
-import 'teacher_page.dart';
 import 'login_page.dart';
+import 'main_layout.dart';
+import 'pantallasmaestros/main_layout_maestros_screen.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -22,6 +23,19 @@ class _RegisterPageState extends State<RegisterPage> {
   String institution = "Universidad";
 
   void register() {
+    // Validar campos vacíos
+    if (nameController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        matriculaController.text.isEmpty ||
+        passwordController.text.isEmpty ||
+        confirmPasswordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Por favor completa todos los campos")),
+      );
+      return;
+    }
+
+    // Validar que las contraseñas coincidan
     if (passwordController.text != confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Las contraseñas no coinciden")),
@@ -29,16 +43,34 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    if (userType == "Maestro") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const MaestrosPage()),
-      );
-    } else {
+    // Validar longitud de contraseña
+    if (passwordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registro de alumno completado (sin BD)")),
+        const SnackBar(content: Text("La contraseña debe tener al menos 6 caracteres")),
       );
+      return;
     }
+
+    // Mostrar mensaje de éxito
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("¡Bienvenido $userType!")),
+    );
+
+    // Redirigir según el tipo de usuario
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (userType == "Maestro") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
+        );
+      } else {
+        // Alumno
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainLayout()),
+        );
+      }
+    });
   }
 
   @override

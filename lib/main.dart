@@ -11,7 +11,7 @@ class EduTrackApp extends StatelessWidget {
   const EduTrackApp({super.key});
 
   @override
-  Widget build(BuildContext contet) {
+  Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'EduTrack',

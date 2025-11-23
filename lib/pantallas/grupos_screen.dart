@@ -6,7 +6,7 @@ class GruposScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[200],
 
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -24,7 +24,7 @@ class GruposScreen extends StatelessWidget {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        leading: Icon(Icons.group, color: Colors.purple.shade700),
+        leading: Icon(Icons.group, color: Colors.deepPurple.shade700),
         title: Text(nombre),
         trailing: const Icon(Icons.arrow_forward_ios),
       ),

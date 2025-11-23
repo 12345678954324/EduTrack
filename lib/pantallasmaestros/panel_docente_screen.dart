@@ -5,19 +5,21 @@ class PanelDocenteScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "¡Bienvenido, Profesor!",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            "Ciclo Escolar 2025 - 2026",
-            style: TextStyle(color: Colors.grey[600], fontSize: 16),
+    return Container(
+      color: Colors.grey[200],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "¡Bienvenido, Profesor!",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              "Ciclo Escolar 2025 - 2026",
+              style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
           const SizedBox(height: 20),
 
@@ -52,6 +54,7 @@ class PanelDocenteScreen extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

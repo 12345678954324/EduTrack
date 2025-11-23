@@ -16,8 +16,10 @@ class MisGruposScreen extends StatelessWidget {
       {"grupo": "MK-11", "materia": "Mercadotecnia", "alumnos": "35 Alumnos"},
     ];
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
+    return Container(
+      color: Colors.grey[200],
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
       itemCount: grupos.length,
       itemBuilder: (context, index) {
         return Card(
@@ -55,6 +57,7 @@ class MisGruposScreen extends StatelessWidget {
           ),
         );
       },
+      ),
     );
   }
 }

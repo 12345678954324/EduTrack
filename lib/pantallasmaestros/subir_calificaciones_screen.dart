@@ -13,19 +13,22 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Container(
+      color: Colors.grey[200],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           const Text(
             "Selecciona los datos:",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple),
           ),
           const SizedBox(height: 20),
 
           // Dropdown Grupo
           DropdownButtonFormField<String>(
+            value: selectedGroup,
             decoration: InputDecoration(
               labelText: "Seleccionar Grupo",
               border: OutlineInputBorder(
@@ -97,7 +100,7 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
                 icon: const Icon(Icons.save),
                 label: const Text("Guardar Calificaciones"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
+                  backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
@@ -118,6 +121,7 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
             ),
           ],
         ],
+      ),
       ),
     );
   }
