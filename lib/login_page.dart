@@ -26,16 +26,31 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     // Mostrar mensaje ANTES de navegar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Bienvenido $userType")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("Bienvenido $userType")));
+
+    // Construimos un nombre a mostrar a partir del correo (parte antes de @)
+    final raw = emailController.text.trim();
+    final displayName = raw.contains('@') && raw.isNotEmpty
+        ? raw.split('@')[0]
+        : raw;
+    // Normalizar: capitalizar primera letra si existe
+    String displayNameNormalized = displayName;
+    if (displayNameNormalized.isNotEmpty) {
+      displayNameNormalized =
+          displayNameNormalized[0].toUpperCase() +
+          displayNameNormalized.substring(1);
+    }
 
     // Lógica de redirección basada en el tipo de usuario
     Future.delayed(const Duration(milliseconds: 500), () {
       if (userType == "Alumno") {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainLayout()),
+          MaterialPageRoute(
+            builder: (context) => MainLayout(username: displayNameNormalized),
+          ),
         );
       } else if (userType == "Maestro") {
         Navigator.pushReplacement(

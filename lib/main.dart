@@ -1,7 +1,8 @@
 // Archivo: lib/main.dart
 
+import 'package:app_calificaciones/login_page.dart';
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import 'pantallas/inicio_screen.dart';
 
 void main() {
   runApp(const EduTrackApp());
@@ -19,7 +20,10 @@ class EduTrackApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
+      // Pantalla inicial: InicioScreen (dashboard del estudiante)
       home: const LoginPage(),
     );
   }
 }
+
+// ...existing code...

@@ -17,10 +17,7 @@ class NotificationsPage extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFF9D4EDD),
-              Color(0xFFEBDDFB),
-            ],
+            colors: [Color(0xFF9D4EDD), Color(0xFFEBDDFB)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -58,18 +55,19 @@ class NotificationsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepPurple,
-              )),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
+          ),
           const SizedBox(height: 5),
-          Text(subtitle,
-              style: const TextStyle(
-                fontSize: 15,
-                color: Colors.black87,
-              )),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 15, color: Colors.black87),
+          ),
         ],
       ),
     );

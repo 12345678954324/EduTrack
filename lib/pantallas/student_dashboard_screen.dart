@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
-import 'historial_academico_screen.dart';
-import 'dart:async'; // Necesario para Future.delayed
+import 'dart:async';
 
-// Pantalla de inicio (conteniendo la UI del Student Dashboard)
-class InicioScreen extends StatefulWidget {
-  final String username;
-  const InicioScreen({super.key, this.username = ''});
-
-  @override
-  State<InicioScreen> createState() => _InicioScreenState();
+// ------------------------------------------------------------------
+// 1. FUNCIÓN SIMULADA DE BASE DE DATOS
+// ------------------------------------------------------------------
+Future<double> fetchAverageFromDatabase() async {
+  await Future.delayed(const Duration(seconds: 2));
+  return 7.0; // Puedes cambiar el promedio para probar
 }
 
-class _InicioScreenState extends State<InicioScreen> {
+// ------------------------------------------------------------------
+// 2. STUDENTDASHBOARDSCREEN (Tu pantalla principal)
+// ------------------------------------------------------------------
+class StudentDashboardScreen extends StatefulWidget {
+  const StudentDashboardScreen({super.key});
+
+  @override
+  State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
+}
+
+class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   double currentAverage = 0.0;
   bool isLoading = true;
 
@@ -23,8 +31,12 @@ class _InicioScreenState extends State<InicioScreen> {
   }
 
   void _loadAcademicData() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+    });
+
     double fetchedAverage = await fetchAverageFromDatabase();
+
     if (mounted) {
       setState(() {
         currentAverage = fetchedAverage;
@@ -34,10 +46,7 @@ class _InicioScreenState extends State<InicioScreen> {
   }
 
   void _navigateToHistorial(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const HistorialAcademicoScreen()),
-    );
+    print('Navegando a Historial Académico...');
   }
 
   @override
@@ -46,31 +55,18 @@ class _InicioScreenState extends State<InicioScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(left: 30.0),
-          child: Text(
-            'Bienvenido ${widget.username.isNotEmpty ? widget.username : '(Nombre del alumno)'}',
-            style: const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        automaticallyImplyLeading: false, // QUITA EL ÍCONO DE MENÚ
+        title: const Text(
+          'Bienvenida Angela',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
-        centerTitle: false,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black),
-          onPressed: () {},
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: CircleAvatar(
-              backgroundColor: Colors.grey[300],
-              child: const Icon(Icons.person, color: Colors.black),
-            ),
-          ),
-        ],
+        actions: const [], // quita icono derecho
       ),
+      drawer: null, // <--- quita menú lateral
+      endDrawer: null, // <--- quita icono de perfil automático
+      // ------------------------------------------------------------------
+      // BOTÓN inferior
+      // ------------------------------------------------------------------
       bottomSheet: Container(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 25),
         decoration: BoxDecoration(
@@ -107,6 +103,8 @@ class _InicioScreenState extends State<InicioScreen> {
           ),
         ),
       ),
+
+      // ------------------------------------------------------------------
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -127,6 +125,7 @@ class _InicioScreenState extends State<InicioScreen> {
                       )
                     : AverageCircleWidget(average: currentAverage),
               ),
+
               const SizedBox(height: 20),
               const AcademicDetailsSection(),
               const SizedBox(height: 100),
@@ -138,22 +137,21 @@ class _InicioScreenState extends State<InicioScreen> {
   }
 }
 
-// Función simulada de base de datos
-Future<double> fetchAverageFromDatabase() async {
-  await Future.delayed(const Duration(seconds: 2));
-  return 5;
-}
-
-// Widgets auxiliares (AverageCircleWidget y AcademicDetailsSection)
+// ------------------------------------------------------------------
+// 3. WIDGET DEL CÍRCULO
+// ------------------------------------------------------------------
 class AverageCircleWidget extends StatelessWidget {
   final double average;
+
   const AverageCircleWidget({super.key, required this.average});
 
   @override
   Widget build(BuildContext context) {
     final double percent = average / 10.0;
+
     String ratingText;
     Color progressColor;
+
     if (average >= 9.1) {
       ratingText = 'Excelente';
       progressColor = const Color(0xFF4CAF50);
@@ -172,9 +170,9 @@ class AverageCircleWidget extends StatelessWidget {
       child: CircularPercentIndicator(
         radius: 100.0,
         lineWidth: 15.0,
-        percent: percent.clamp(0.0, 1.0),
+        percent: percent,
         progressColor: progressColor,
-        backgroundColor: const Color(0xFF9575CD),
+        backgroundColor: const Color(0xFFF0F0F5),
         circularStrokeCap: CircularStrokeCap.round,
         animation: true,
         animationDuration: 1000,
@@ -203,11 +201,11 @@ class AverageCircleWidget extends StatelessWidget {
               const SizedBox(height: 5),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10.0,
-                  vertical: 3.0,
+                  horizontal: 10,
+                  vertical: 3,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.black26,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -227,6 +225,9 @@ class AverageCircleWidget extends StatelessWidget {
   }
 }
 
+// ------------------------------------------------------------------
+// 4. SECCIÓN DE DETALLES
+// ------------------------------------------------------------------
 class AcademicDetailsSection extends StatelessWidget {
   const AcademicDetailsSection({super.key});
 
@@ -244,16 +245,19 @@ class AcademicDetailsSection extends StatelessWidget {
             height: 3,
           ),
         ),
-        const SizedBox(height: 0),
+
         _buildDetailRow(Icons.menu_book, 'Carrera: Ingeniería de Software'),
         const SizedBox(height: 10),
+
         _buildDetailRow(Icons.assignment_ind_outlined, 'Matrícula: 20230045'),
         const SizedBox(height: 10),
+
         _buildDetailRow(
           Icons.calendar_month,
           'Próximo Evento: Examen Final - 20 Nov.',
         ),
         const SizedBox(height: 25),
+
         const Text(
           'Materias Activas',
           style: TextStyle(
@@ -263,13 +267,13 @@ class AcademicDetailsSection extends StatelessWidget {
             height: 2,
           ),
         ),
-        const SizedBox(height: 0),
-        _buildSubjectItem('Materia 1: Desarrollo Móvil (Próxima entrega)'),
-        _buildSubjectItem('Materia 2: Álgebra Lineal (Reprobada - 6.5)'),
-        _buildSubjectItem('Materia 3: Estructuras de Datos (Aprobada - 8.9)'),
-        _buildSubjectItem('Materia 4: Lógica Digital'),
-        _buildSubjectItem('Materia 5: Cálculo Integral'),
-        _buildSubjectItem('Materia 6: Fundamentos de Economía'),
+
+        _buildSubjectItem('Desarrollo Móvil (Próxima entrega)'),
+        _buildSubjectItem('Álgebra Lineal (Reprobada - 6.5)'),
+        _buildSubjectItem('Estructuras de Datos (Aprobada - 8.9)'),
+        _buildSubjectItem('Lógica Digital'),
+        _buildSubjectItem('Cálculo Integral'),
+        _buildSubjectItem('Fundamentos de Economía'),
       ],
     );
   }
@@ -277,7 +281,7 @@ class AcademicDetailsSection extends StatelessWidget {
   Widget _buildDetailRow(IconData icon, String text) {
     return Row(
       children: <Widget>[
-        Icon(icon, color: Colors.deepPurple[400], size: 28),
+        Icon(icon, color: Colors.deepPurple, size: 28),
         const SizedBox(width: 15),
         Text(
           text,
