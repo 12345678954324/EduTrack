@@ -52,16 +52,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false, // QUITA EL ÍCONO DE MENÚ
-        title: const Text(
-          'Bienvenida Angela',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        actions: const [], // quita icono derecho
-      ),
       drawer: null, // <--- quita menú lateral
       endDrawer: null, // <--- quita icono de perfil automático
       // ------------------------------------------------------------------

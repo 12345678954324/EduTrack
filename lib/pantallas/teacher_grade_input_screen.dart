@@ -189,11 +189,6 @@ class _TeacherGradeInputScreenState extends State<TeacherGradeInputScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Registro de Calificaciones (Maestro)'),
-        backgroundColor: Colors.indigo,
-        elevation: 0,
-      ),
       body: Form(
         key: _formKey,
         child: Column(

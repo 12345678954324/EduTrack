@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'register_page.dart';
 import 'main_layout.dart'; // Layout de Alumnos
 import 'pantallasmaestros/main_layout_maestros_screen.dart'; // Layout de Maestros (IMPORTANTE)
@@ -24,41 +25,57 @@ class _LoginPageState extends State<LoginPage> {
       );
       return;
     }
+    // Verificar credenciales guardadas
+    _verifyAndLogin();
+  }
 
-    // Mostrar mensaje ANTES de navegar
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Bienvenido $userType")));
+  Future<void> _verifyAndLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUsername = prefs.getString('saved_username');
+    final savedPassword = prefs.getString('saved_password');
+    final savedUserType = prefs.getString('saved_userType') ?? 'Alumno';
 
-    // Construimos un nombre a mostrar a partir del correo (parte antes de @)
-    final raw = emailController.text.trim();
-    final displayName = raw.contains('@') && raw.isNotEmpty
-        ? raw.split('@')[0]
-        : raw;
-    // Normalizar: capitalizar primera letra si existe
-    String displayNameNormalized = displayName;
-    if (displayNameNormalized.isNotEmpty) {
-      displayNameNormalized =
-          displayNameNormalized[0].toUpperCase() +
-          displayNameNormalized.substring(1);
+    if (savedUsername == null || savedPassword == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay una cuenta registrada. Regístrate primero.')),
+      );
+      return;
     }
 
-    // Lógica de redirección basada en el tipo de usuario
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (userType == "Alumno") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MainLayout(username: displayNameNormalized),
-          ),
-        );
-      } else if (userType == "Maestro") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
-        );
+    final inputUsername = emailController.text.trim();
+    final inputPassword = passwordController.text;
+
+    if (inputUsername == savedUsername && inputPassword == savedPassword && userType == savedUserType) {
+      // Construimos displayName a partir del username (nombre)
+      final raw = inputUsername;
+      final displayName = raw.isNotEmpty ? raw.split(' ')[0] : raw;
+      String displayNameNormalized = displayName;
+      if (displayNameNormalized.isNotEmpty) {
+        displayNameNormalized = displayNameNormalized[0].toUpperCase() + displayNameNormalized.substring(1);
       }
-    });
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Bienvenido $userType")));
+
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (userType == "Alumno") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainLayout(username: displayNameNormalized),
+            ),
+          );
+        } else if (userType == "Maestro") {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
+          );
+        }
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Usuario o contraseña incorrectos')),
+      );
+    }
   }
 
   @override
@@ -97,8 +114,8 @@ class _LoginPageState extends State<LoginPage> {
                 TextField(
                   controller: emailController,
                   decoration: InputDecoration(
-                    labelText: "Correo",
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    labelText: "Usuario",
+                    prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),

@@ -1,6 +1,7 @@
 // Archivo: lib/register_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
 import 'main_layout.dart';
 import 'pantallasmaestros/main_layout_maestros_screen.dart';
@@ -51,6 +52,13 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    // Guardar credenciales localmente (shared_preferences)
+    _saveCredentials(
+      nameController.text.trim(),
+      passwordController.text,
+      userType,
+    );
+
     // Mostrar mensaje de éxito
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("¡Bienvenido $userType!")),
@@ -58,6 +66,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
     // Redirigir según el tipo de usuario
     Future.delayed(const Duration(milliseconds: 500), () {
+      // Construimos displayName a partir del nombre completo
+      final raw = nameController.text.trim();
+      final displayName = raw.isNotEmpty ? raw.split(' ')[0] : 'Alumno';
+      String displayNameNormalized = displayName;
+      if (displayNameNormalized.isNotEmpty) {
+        displayNameNormalized = displayNameNormalized[0].toUpperCase() + displayNameNormalized.substring(1);
+      }
+
       if (userType == "Maestro") {
         Navigator.pushReplacement(
           context,
@@ -67,10 +83,17 @@ class _RegisterPageState extends State<RegisterPage> {
         // Alumno
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainLayout()),
+          MaterialPageRoute(builder: (context) => MainLayout(username: displayNameNormalized)),
         );
       }
     });
+  }
+
+  Future<void> _saveCredentials(String username, String password, String type) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_username', username);
+    await prefs.setString('saved_password', password);
+    await prefs.setString('saved_userType', type);
   }
 
   @override

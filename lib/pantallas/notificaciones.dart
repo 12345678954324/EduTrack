@@ -6,14 +6,6 @@ class NotificationsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        title: const Text(
-          "Notificaciones",
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
-
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

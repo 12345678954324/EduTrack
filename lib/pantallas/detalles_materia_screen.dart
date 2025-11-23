@@ -15,10 +15,6 @@ class DetallesMateriaScreen extends StatelessWidget {
         : Colors.red;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Detalles de ${materia.nombre}'),
-        backgroundColor: colorPrincipal,
-      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),

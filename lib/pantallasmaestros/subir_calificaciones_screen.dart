@@ -231,11 +231,6 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Subir Calificaciones"),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-      ),
       body: Container(
         color: Colors.grey[200],
         child: SingleChildScrollView(

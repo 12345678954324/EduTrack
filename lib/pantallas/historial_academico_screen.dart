@@ -118,11 +118,6 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
         : 0.0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Historial Académico'),
-        centerTitle: true,
-        backgroundColor: Colors.teal,
-      ),
       body: Column(
         children: [
           _buildSemestreSelector(),
