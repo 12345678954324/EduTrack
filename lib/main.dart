@@ -25,5 +25,3 @@ class EduTrackApp extends StatelessWidget {
     );
   }
 }
-
-// ...existing code...

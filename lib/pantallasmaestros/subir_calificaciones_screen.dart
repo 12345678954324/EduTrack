@@ -1,13 +1,5 @@
 import 'package:flutter/material.dart';
-
-// Modelo de datos simple para un alumno
-class Alumno {
-  final String nombre;
-  final String matricula;
-  String? calificacion; // Calificación opcional (null si no ha sido ingresada)
-
-  Alumno({required this.nombre, required this.matricula, this.calificacion});
-}
+import '../services/api_service.dart';
 
 class SubirCalificacionesScreen extends StatefulWidget {
   const SubirCalificacionesScreen({super.key});
@@ -18,339 +10,264 @@ class SubirCalificacionesScreen extends StatefulWidget {
 }
 
 class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
-  String? selectedGroup;
+  // === ESTADO ===
+  List<Grupo> _grupos = [];
+  int? _selectedGrupoId;
+
+  bool _loading = false;
+  List<Alumno> _alumnos = [];
+
+  // Mapas para las calificaciones y los inputs
+  final Map<int, String?> _calificaciones = {};
+  final Map<int, TextEditingController> _controllers = {};
+
   final TextEditingController _searchController = TextEditingController();
   String _searchText = '';
-  
-  // Lista de alumnos simulada con NOMBRES REALISTAS
-  List<Alumno> _alumnos = [
-    Alumno(nombre: "Ana María López Pérez", matricula: "2100001", calificacion: "9.5"),
-    Alumno(nombre: "Carlos Alberto Gómez Ruiz", matricula: "2100002", calificacion: "8.0"),
-    Alumno(nombre: "Sofía Elena Torres Vega", matricula: "2100003"), // Sin calif.
-    Alumno(nombre: "Ricardo Daniel Castro Ríos", matricula: "2100004", calificacion: "10.0"),
-    Alumno(nombre: "Valeria Isabel Herrera Solís", matricula: "2100005"), // Sin calif.
-    Alumno(nombre: "Javier Antonio Mendoza Luna", matricula: "2100006", calificacion: "7.0"),
-    Alumno(nombre: "Brenda Giselle Núñez Pardo", matricula: "2100007", calificacion: "9.0"),
-    // Nuevos alumnos para completar la lista
-    Alumno(nombre: "Manuel Alejandro Soto Díaz", matricula: "2100008", calificacion: "8.5"),
-    Alumno(nombre: "Fernanda Carolina Vidal Mora", matricula: "2100009"),
-    Alumno(nombre: "Eduardo Jesús Ramos García", matricula: "2100010", calificacion: "6.0"),
-  ];
-
-  // Map para manejar el estado de edición de cada alumno por su matrícula
-  final Map<String, bool> _isEditing = {};
-
-  // Map para guardar temporalmente la nueva calificación durante la edición
-  final Map<String, TextEditingController> _calificacionControllers = {};
-
-  // Constante para el ancho de la caja de calificación
-  static const double _califBoxWidth = 50.0;
 
   @override
   void initState() {
     super.initState();
+    _cargarGruposIniciales();
     _searchController.addListener(() {
+      setState(() => _searchText = _searchController.text);
+    });
+  }
+
+  // 1. Cargar Grupos al inicio
+  Future<void> _cargarGruposIniciales() async {
+    try {
+      final grupos = await ApiService.getGrupos();
       setState(() {
-        _searchText = _searchController.text;
+        _grupos = grupos;
       });
-    });
 
-    // Inicializar controllers y estados de edición
-    for (var alumno in _alumnos) {
-      // Usar un controlador para manejar el valor inicial (si existe) y la edición
-      _calificacionControllers[alumno.matricula] =
-          TextEditingController(text: alumno.calificacion);
-      // Entrar en modo edición si no tiene calificación
-      _isEditing[alumno.matricula] = alumno.calificacion == null; 
-    }
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _calificacionControllers.forEach((key, controller) => controller.dispose());
-    super.dispose();
-  }
-
-  // Lógica para filtrar alumnos
-  List<Alumno> get _filteredAlumnos {
-    if (_searchText.isEmpty) {
-      return _alumnos;
-    }
-    return _alumnos.where((alumno) {
-      final query = _searchText.toLowerCase();
-      return alumno.nombre.toLowerCase().contains(query) ||
-             alumno.matricula.toLowerCase().contains(query);
-    }).toList();
-  }
-
-  // Función para guardar una calificación individual
-  void _guardarCalificacion(Alumno alumno) {
-    setState(() {
-      final controller = _calificacionControllers[alumno.matricula]!;
-      String newCal = controller.text.trim();
-      
-      if (newCal.isNotEmpty) {
-        // Validación básica (ejemplo: solo números y punto)
-        if (RegExp(r'^\d+(\.\d)?$').hasMatch(newCal)) {
-             // Forzar la calificación a tener un formato uniforme (ej. 9.0)
-            if (!newCal.contains('.')) {
-              newCal += '.0';
-            }
-            alumno.calificacion = newCal;
-            controller.text = newCal; // Asegurar que el controlador refleje el formato
-            _isEditing[alumno.matricula] = false;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Calificación de ${alumno.nombre} guardada.")),
-            );
-        } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Formato de calificación inválido (ej. 9.5).")),
-            );
-        }
-      } else {
-         // Si el campo está vacío, se considera eliminación
-        _eliminarCalificacion(alumno);
+      // DEBUG: Si la lista llega vacía, avisa por consola
+      if (grupos.isEmpty) {
+        print("⚠️ ALERTA: La API devolvió 0 grupos. Revisa tu base de datos.");
       }
-    });
-  }
-
-  // Función para eliminar una calificación
-  void _eliminarCalificacion(Alumno alumno) {
-    setState(() {
-      alumno.calificacion = null;
-      _calificacionControllers[alumno.matricula]!.text = "";
-      _isEditing[alumno.matricula] = true; // Volver a modo edición
+    } catch (e) {
+      print("❌ Error cargando grupos: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Calificación de ${alumno.nombre} eliminada.")),
+        SnackBar(
+          content: Text('Error de conexión: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
-    });
+    }
   }
 
-  // Función para iniciar la edición de una calificación
-  void _iniciarEdicion(Alumno alumno) {
-    setState(() {
-      _isEditing[alumno.matricula] = true;
-    });
+  // 2. Cargar Alumnos cuando se elige un ID
+  Future<void> _fetchAlumnos(int grupoId) async {
+    setState(() => _loading = true);
+    _alumnos.clear();
+    _controllers.clear();
+    _calificaciones.clear();
+
+    try {
+      final alumnos = await ApiService.getAlumnosPorGrupo(grupoId);
+
+      setState(() {
+        _alumnos = alumnos;
+        for (var alumno in alumnos) {
+          _controllers[alumno.id] = TextEditingController(text: '');
+        }
+      });
+
+      // Cargar calificaciones existentes
+      for (var alumno in alumnos) {
+        final calif = await ApiService.getCalificacion(alumno.id, grupoId);
+        if (calif != null && mounted) {
+          setState(() {
+            _calificaciones[alumno.id] = calif;
+            _controllers[alumno.id]?.text = calif;
+          });
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error cargando alumnos: $e')));
+    } finally {
+      setState(() => _loading = false);
+    }
   }
 
-  // Widget para el control de calificación y acciones
-  Widget _buildCalificacionControl(Alumno alumno) {
-    final bool isEditing = _isEditing[alumno.matricula] ?? false;
-    final controller = _calificacionControllers[alumno.matricula]!;
+  // 3. Guardar Calificación
+  void _guardarCalificacion(Alumno alumno) async {
+    if (_selectedGrupoId == null) return; // Validación extra
 
-    return SizedBox(
-      // Usar SizedBox para controlar el ancho total del trailing y mantener la alineación
-      width: isEditing ? _califBoxWidth + 8 + 48 : _califBoxWidth + 96,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          if (isEditing) ...[
-            SizedBox(
-              width: _califBoxWidth, // Ancho fijo para el campo
-              child: TextField(
-                controller: controller,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: "C.",
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Botón GUARDAR
-            Container(
-              width: 38, // Ancho fijo para el icono
-              child: IconButton(
-                icon: const Icon(Icons.save, color: Colors.green),
-                onPressed: () => _guardarCalificacion(alumno),
-                tooltip: "Guardar",
-                padding: EdgeInsets.zero,
-                iconSize: 22,
-              ),
-            ),
-          ] else ...[
-            // MODO VISUALIZACIÓN
-            Container(
-              width: _califBoxWidth, // Ancho fijo para la caja de calificación
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.deepPurple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: alumno.calificacion == null ? Colors.grey : Colors.deepPurple,
-                  width: 1.5,
-                ),
-              ),
-              child: Text(
-                alumno.calificacion ?? "Calif.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontWeight: alumno.calificacion == null ? FontWeight.normal : FontWeight.bold, 
-                  fontSize: 14, 
-                  color: alumno.calificacion == null ? Colors.grey : Colors.deepPurple
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Botón EDITAR
-            Container(
-              width: 38,
-              child: IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue),
-                onPressed: () => _iniciarEdicion(alumno),
-                tooltip: "Editar",
-                padding: EdgeInsets.zero,
-                iconSize: 22,
-              ),
-            ),
-            // Botón ELIMINAR
-            Container(
-              width: 38,
-              child: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: alumno.calificacion != null ? () => _eliminarCalificacion(alumno) : null,
-                tooltip: "Eliminar",
-                padding: EdgeInsets.zero,
-                iconSize: 22,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
+    final textValue = _controllers[alumno.id]?.text.trim();
+    if (textValue == null || textValue.isEmpty) return;
+
+    final double? valorNumerico = double.tryParse(textValue);
+    if (valorNumerico == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa un número válido (ej. 9.5)')),
+      );
+      return;
+    }
+
+    try {
+      await ApiService.guardarCalificacion(
+        alumno.id,
+        _selectedGrupoId!,
+        valorNumerico,
+      );
+
+      setState(() {
+        _calificaciones[alumno.id] = textValue;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Calificación de ${alumno.nombre} guardada.'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
+  // Filtro del buscador
+  List<Alumno> get _filteredAlumnos {
+    if (_searchText.isEmpty) return _alumnos;
+    final q = _searchText.toLowerCase();
+    return _alumnos
+        .where(
+          (al) =>
+              al.nombre.toLowerCase().contains(q) ||
+              al.correo.toLowerCase().contains(q),
+        )
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        color: Colors.grey[200],
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Selecciona los datos:",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+        padding: const EdgeInsets.all(16),
+        color: Colors.grey[100],
+        child: Column(
+          children: [
+            // === DROPDOWN DE GRUPOS ===
+            DropdownButtonFormField<int>(
+              value: _selectedGrupoId,
+              hint: _grupos.isEmpty
+                  ? const Text("Cargando grupos...")
+                  : const Text("Selecciona un grupo"),
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Colors.white,
               ),
-              const SizedBox(height: 20),
+              // Aquí la magia: El valor es el ID (int), el texto es el Nombre
+              items: _grupos.map((grupo) {
+                return DropdownMenuItem<int>(
+                  value: grupo.id,
+                  child: Text("${grupo.nombre} - ${grupo.materia}"),
+                );
+              }).toList(),
+              onChanged: (nuevoId) {
+                if (nuevoId != null) {
+                  setState(() => _selectedGrupoId = nuevoId);
+                  _fetchAlumnos(nuevoId);
+                }
+              },
+            ),
 
-              // Dropdown Grupo
-              DropdownButtonFormField<String>(
-                value: selectedGroup,
-                decoration: InputDecoration(
-                  labelText: "Seleccionar Grupo",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.group),
+            const SizedBox(height: 10),
+
+            // === BUSCADOR ===
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: 'Buscar alumno...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                items: const [
-                  DropdownMenuItem(
-                    value: "TI-51",
-                    child: Text("TI-51 - Desarrollo Móvil"),
-                  ),
-                  DropdownMenuItem(
-                    value: "TI-52",
-                    child: Text("TI-52 - Base de Datos"),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    selectedGroup = value;
-                  });
-                },
+                filled: true,
+                fillColor: Colors.white,
               ),
+            ),
 
-              const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
-              // Lista de alumnos simulada (aparece solo si hay grupo seleccionado)
-              if (selectedGroup != null) ...[
-                const Text(
-                  "Alumnos:",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-
-                // Campo de Búsqueda
-                TextFormField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: "Buscar por nombre o matrícula...",
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Lista de alumnos filtrada
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _filteredAlumnos.length,
-                  itemBuilder: (context, index) {
-                    final alumno = _filteredAlumnos[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        title: Text(alumno.nombre),
-                        subtitle: Text("Matrícula: ${alumno.matricula}"),
-                        // Usamos un Align para asegurar que los elementos estén centrados
-                        // verticalmente en el trailing del ListTile
-                        trailing: Align(
-                            widthFactor: 1.0, 
-                            heightFactor: 1.0, 
-                            child: _buildCalificacionControl(alumno)
+            // === LISTA ===
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _alumnos.isEmpty
+                  ? Center(
+                      child: Text(
+                        _selectedGrupoId == null
+                            ? '👆 Selecciona un grupo arriba'
+                            : 'No hay alumnos en este grupo',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
                         ),
                       ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Guardando todas las calificaciones...")),
-                      );
-                    },
-                    icon: const Icon(Icons.save),
-                    label: const Text("Guardar Todas las Calificaciones"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _filteredAlumnos.length,
+                      itemBuilder: (ctx, i) {
+                        final alumno = _filteredAlumnos[i];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          elevation: 2,
+                          child: ListTile(
+                            title: Text(
+                              alumno.nombre,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(alumno.correo),
+                            trailing: SizedBox(
+                              width: 100,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _controllers[alumno.id],
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
+                                      textAlign: TextAlign.center,
+                                      decoration: const InputDecoration(
+                                        hintText: '-',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.save,
+                                      color: Colors.green,
+                                    ),
+                                    onPressed: () =>
+                                        _guardarCalificacion(alumno),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                ),
-              ] else ...[
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: Text(
-                      "Selecciona un grupo para ver la lista de alumnos.",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
