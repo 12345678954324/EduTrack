@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // IMPORTS DE PANTALLAS
-import 'pantallas/inicio_screen.dart';
-import 'pantallas/grupos_screen.dart';
+// import 'pantallas/inicio_screen.dart'; // <--- YA NO NECESITAMOS ESTE
+import 'pantallas/historial_academico_screen.dart'; // <--- NUEVO
 import 'pantallas/calendario_screen.dart';
 import 'pantallas/ayuda_screen.dart';
 import 'pantallas/notificaciones.dart';
-import 'login_page.dart'; // Importante para poder cerrar sesión
-// import 'pantallas/detalles_materia_screen.dart'; // No se necesita importar aquí si no está en la lista
+import 'login_page.dart';
+
+// IMPORTANTE: Importa tu nueva pantalla del Dashboard
+import 'pantallas/student_dashboard_screen.dart';
 
 class MainLayout extends StatefulWidget {
   final String username;
-  const MainLayout({super.key, this.username = 'Alumno'});
+  final int usuarioId; // Este ID es vital para traer las calificaciones
+
+  const MainLayout({
+    super.key,
+    this.username = 'Alumno',
+    this.usuarioId = 3, // ID por defecto o el que viene del Login
+  });
 
   @override
   State<MainLayout> createState() => _MainLayoutState();
@@ -20,22 +29,43 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
-  // 1. LISTA DE PANTALLAS (ALUMNO) - Solo incluye las pantallas raíz
+  // Variables para los datos del encabezado
+  String _nombreDisplay = '';
+  String _correoDisplay = '';
+  String _rolDisplay = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _nombreDisplay = widget.username;
+    _cargarDatosUsuario();
+  }
+
+  Future<void> _cargarDatosUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _correoDisplay =
+          prefs.getString('saved_username') ?? 'correo@ejemplo.com';
+      _rolDisplay = prefs.getString('saved_userType') ?? 'Alumno';
+
+      if (_nombreDisplay == 'Alumno' || _nombreDisplay.isEmpty) {
+        _nombreDisplay = _correoDisplay.split('@')[0];
+      }
+    });
+  }
+
+  // Pantallas del menú
   List<Widget> get _widgetOptions => <Widget>[
-    InicioScreen(username: widget.username),
-    const GruposScreen(),
+    StudentDashboardScreen(userId: widget.usuarioId),
+    HistorialAcademicoScreen(alumnoId: widget.usuarioId), // <--- REEMPLAZADO
     const CalendarioScreen(),
-    // Usaremos Notificaciones como el 4to ítem temporal, ya que DetallesMateriaScreen no va aquí:
-    const NotificationsPage(),
     const AyudaScreen(),
   ];
 
-  // 2. TÍTULOS - Coinciden con los ítems del Drawer y la lista de arriba
   static const List<String> _titles = [
-    'Inicio',
-    'Grupos',
+    'Mi Desempeño',
+    'Historial Académico', // <--- CAMBIADO
     'Calendario Escolar',
-    'Notificaciones', // Ajustado el título
     'Ayuda y Soporte',
   ];
 
@@ -43,7 +73,6 @@ class _MainLayoutState extends State<MainLayout> {
     setState(() {
       _selectedIndex = index;
     });
-    // Cierra el Drawer después de seleccionar un ítem
     Navigator.of(context).pop();
   }
 
@@ -52,18 +81,18 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_titles[_selectedIndex]),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: const Color(0xFF673AB7),
         foregroundColor: Colors.white,
-        elevation: 4.0,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              // Navegación directa al tocar el ícono de notificación
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const NotificationsPage(),
+                  builder: (context) =>
+                      NotificationsPage(usuarioId: widget.usuarioId),
                 ),
               );
             },
@@ -75,32 +104,25 @@ class _MainLayoutState extends State<MainLayout> {
           color: Colors.white,
           child: Column(
             children: [
-              // LISTA DE OPCIONES (Arriba)
+              _buildDrawerHeader(),
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
-                    _buildDrawerHeader(),
                     _buildDrawerItem(
-                      icon: Icons.home_rounded,
-                      text: 'Inicio',
+                      icon: Icons.dashboard_rounded,
+                      text: 'Mi Desempeño',
                       index: 0,
                     ),
                     _buildDrawerItem(
-                      icon: Icons.group_rounded,
-                      text: 'Grupos',
+                      icon: Icons.school_rounded, // <--- NUEVO ÍCONO
+                      text: 'Historial Académico', // <--- CAMBIADO
                       index: 1,
                     ),
                     _buildDrawerItem(
                       icon: Icons.calendar_today_rounded,
                       text: 'Calendario',
                       index: 2,
-                    ),
-                    _buildDrawerItem(
-                      icon: Icons
-                          .notifications_rounded, // Usamos un ícono diferente para Notificaciones
-                      text: 'Notificaciones',
-                      index: 3,
                     ),
                     const Divider(
                       color: Colors.grey,
@@ -110,13 +132,11 @@ class _MainLayoutState extends State<MainLayout> {
                     _buildDrawerItem(
                       icon: Icons.help_outline_rounded,
                       text: '¿Necesitas ayuda?',
-                      index: 4,
+                      index: 3,
                     ),
                   ],
                 ),
               ),
-
-              // BOTÓN CERRAR SESIÓN (Al fondo)
               Padding(
                 padding: const EdgeInsets.only(bottom: 20, left: 8, right: 8),
                 child: ListTile(
@@ -134,13 +154,17 @@ class _MainLayoutState extends State<MainLayout> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  onTap: () {
-                    // Cierra la sesión y navega a la pantalla de Login (reemplazando la actual)
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => const LoginPage(),
-                      ),
-                    );
+                  onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.clear(); // Limpiamos datos al salir
+
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                      );
+                    }
                   },
                 ),
               ),
@@ -148,30 +172,53 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
       ),
-      // Muestra la pantalla seleccionada
+
       body: _widgetOptions.elementAt(_selectedIndex),
     );
   }
 
-  // Widget para el encabezado del Drawer
   Widget _buildDrawerHeader() {
     return UserAccountsDrawerHeader(
       accountName: Text(
-        widget.username.isNotEmpty ? widget.username : 'Usuario: Alumno',
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        _nombreDisplay,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
       ),
-      accountEmail: const Text('', style: TextStyle(fontSize: 14)),
+      accountEmail: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_correoDisplay, style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 2),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              _rolDisplay.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
       currentAccountPicture: CircleAvatar(
         backgroundColor: Colors.white,
-        child: Icon(
-          Icons.person_outline_rounded,
-          size: 45,
-          color: Colors.purple.shade700,
+        child: Text(
+          _nombreDisplay.isNotEmpty ? _nombreDisplay[0].toUpperCase() : 'A',
+          style: const TextStyle(
+            fontSize: 28,
+            color: Color(0xFF673AB7),
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade400],
+          colors: [Color(0xFF673AB7), Color(0xFF9575CD)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -179,21 +226,21 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  // Widget auxiliar para construir los ítems del Drawer
   Widget _buildDrawerItem({
     required IconData icon,
     required String text,
     required int index,
   }) {
     final bool isSelected = _selectedIndex == index;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         gradient: isSelected
             ? LinearGradient(
                 colors: [
-                  Colors.deepPurple.shade100,
-                  Colors.deepPurple.shade50.withOpacity(0.5),
+                  const Color(0xFF673AB7).withOpacity(0.2),
+                  const Color(0xFF673AB7).withOpacity(0.05),
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -204,12 +251,12 @@ class _MainLayoutState extends State<MainLayout> {
       child: ListTile(
         leading: Icon(
           icon,
-          color: isSelected ? Colors.deepPurple.shade800 : Colors.grey.shade700,
+          color: isSelected ? const Color(0xFF673AB7) : Colors.grey.shade700,
         ),
         title: Text(
           text,
           style: TextStyle(
-            color: isSelected ? Colors.deepPurple.shade900 : Colors.black87,
+            color: isSelected ? const Color(0xFF673AB7) : Colors.black87,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),

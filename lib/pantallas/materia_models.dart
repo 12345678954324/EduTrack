@@ -18,9 +18,27 @@ class Evaluacion {
 
   // Cálculo: Contribución al total
   double get contribucion => (calificacion * peso) / 100.0;
+
+  // Factory desde JSON
+  factory Evaluacion.fromJson(Map<String, dynamic> json) {
+    return Evaluacion(
+      nombre: json['nombre'] ?? 'Sin nombre',
+      peso: (json['peso'] as num?)?.toDouble() ?? 0.0,
+      calificacion: (json['calificacion'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    "nombre": nombre,
+    "peso": peso,
+    "calificacion": calificacion,
+  };
 }
 
+// -----------------------------------------------------------------
 // Modelo de la Materia
+// -----------------------------------------------------------------
+
 class Materia {
   final String nombre;
   final String profesor;
@@ -34,22 +52,57 @@ class Materia {
     required this.evaluaciones,
   });
 
-  // Método para calcular la Calificación Final
+  // Calcular calificación final
   double get calificacionFinal {
     if (evaluaciones.isEmpty) return 0.0;
 
-    double sumaContribuciones = evaluaciones.fold(
-      0.0,
-      (sum, item) => sum + item.contribucion,
-    );
-    // Usamos min para asegurar que la nota final no exceda 10.0
-    return min(sumaContribuciones, 10.0);
+    double total = evaluaciones.fold(0.0, (sum, e) => sum + e.contribucion);
+
+    return min(total, 10.0); // nunca excede 10
   }
 
-  // Determina el estatus de la materia
+  // Estatus
   String get estatus {
     if (evaluaciones.isEmpty) return 'En Curso';
     if (calificacionFinal < 7.0) return 'Reprobada';
     return 'Aprobada';
   }
+
+  // ---------------------------------------------------------------
+  // FACTORY: Desde backend JSON real
+  // ---------------------------------------------------------------
+  factory Materia.fromBackendJson(Map<String, dynamic> json) {
+    return Materia(
+      nombre: json['nombre'] ?? 'Sin nombre',
+      profesor: json['profesor'] ?? 'Sin profesor',
+      semestre: json['semestre']?.toString() ?? 'Sin semestre',
+      evaluaciones: (json['evaluaciones'] as List<dynamic>? ?? [])
+          .map((e) => Evaluacion.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // FACTORY: Desde JSON local o frontend
+  // ---------------------------------------------------------------
+  factory Materia.fromJson(Map<String, dynamic> json) {
+    return Materia(
+      nombre: json['nombre'] ?? 'Sin nombre',
+      profesor: json['profesor'] ?? 'Sin profesor',
+      semestre: json['semestre']?.toString() ?? 'Sin semestre',
+      evaluaciones: (json['evaluaciones'] as List<dynamic>? ?? [])
+          .map((e) => Evaluacion.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // Convertir a JSON
+  // ---------------------------------------------------------------
+  Map<String, dynamic> toJson() => {
+    "nombre": nombre,
+    "profesor": profesor,
+    "semestre": semestre,
+    "evaluaciones": evaluaciones.map((e) => e.toJson()).toList(),
+  };
 }

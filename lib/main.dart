@@ -2,7 +2,6 @@
 
 import 'package:app_calificaciones/login_page.dart';
 import 'package:flutter/material.dart';
-import 'pantallas/inicio_screen.dart';
 
 void main() {
   runApp(const EduTrackApp());

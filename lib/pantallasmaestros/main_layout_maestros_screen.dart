@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // IMPORTS DE UTILIDADES
-import '../pantallas/notificaciones.dart';
+import '../pantallas/notificaciones.dart'; // Asegúrate que este sea NotificationsPage
 import '../pantallas/ayuda_screen.dart';
 import '../login_page.dart';
 
-// IMPORTS DE NUEVAS PANTALLAS DE MAESTRO
+// IMPORTS DE PANTALLAS DE MAESTRO
 import 'panel_docente_screen.dart';
 import 'mis_grupos_screen.dart';
 import 'subir_calificaciones_screen.dart';
@@ -20,12 +21,40 @@ class MainLayoutMaestros extends StatefulWidget {
 class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
   int _selectedIndex = 0;
 
-  // 1. LISTA DE PANTALLAS (Con las nuevas pantallas reales)
+  // Variables para datos del perfil
+  String _nombreDisplay = 'Cargando...';
+  String _correoDisplay = '';
+  int _usuarioId = 0; // 👈 NECESARIO: Almacenar el ID del profesor
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatosUsuario();
+  }
+
+  // Leemos los datos guardados en el Login
+  Future<void> _cargarDatosUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Leemos el ID, el nombre y el correo que se guardaron en el Login
+    final id = prefs.getInt('saved_id') ?? 0;
+
+    if (mounted) {
+      setState(() {
+        _usuarioId = id;
+        _nombreDisplay = prefs.getString('saved_name') ?? 'Profesor';
+        _correoDisplay =
+            prefs.getString('saved_username') ?? 'profesor@colegio.com';
+      });
+    }
+  }
+
+  // 1. LISTA DE PANTALLAS
   static final List<Widget> _widgetOptions = <Widget>[
-    const PanelDocenteScreen(), // Índice 0: Panel
-    const MisGruposScreen(), // Índice 1: Grupos
-    const SubirCalificacionesScreen(), // Índice 2: Subir Calif
-    AyudaScreen(), // Índice 3: Ayuda (Reutilizada)
+    const PanelDocenteScreen(), // 0
+    const MisGruposScreen(), // 1
+    const SubirCalificacionesScreen(), // 2
+    const AyudaScreen(), // 3
   ];
 
   // 2. TÍTULOS
@@ -51,14 +80,17 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         elevation: 4.0,
+        // --- AQUÍ ESTÁ LA CAMPANA DE NOTIFICACIONES ---
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
+              // Pasa el ID del profesor para que cargue sus recordatorios
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const NotificationsPage(),
+                  builder: (context) =>
+                      NotificationsPage(usuarioId: _usuarioId),
                 ),
               );
             },
@@ -70,12 +102,14 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
           color: Colors.white,
           child: Column(
             children: [
-              // LISTA DE OPCIONES
+              // --- ENCABEZADO DINÁMICO ---
+              _buildDrawerHeader(),
+
+              // --- LISTA DE OPCIONES ---
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
-                    _buildDrawerHeader(),
                     _buildDrawerItem(
                       icon: Icons.dashboard_rounded,
                       text: 'Panel Docente',
@@ -105,7 +139,7 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
                 ),
               ),
 
-              // BOTÓN CERRAR SESIÓN
+              // --- BOTÓN CERRAR SESIÓN ---
               Padding(
                 padding: const EdgeInsets.only(bottom: 20, left: 8, right: 8),
                 child: ListTile(
@@ -123,12 +157,14 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  onTap: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => const LoginPage(),
-                      ),
-                    );
+                  onTap: () async {
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                      );
+                    }
                   },
                 ),
               ),
@@ -142,20 +178,41 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
 
   Widget _buildDrawerHeader() {
     return UserAccountsDrawerHeader(
-      accountName: const Text(
-        'Profesor: XXXXX',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      accountName: Text(
+        _nombreDisplay,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
-      accountEmail: const Text(
-        'profesor@ut.edu.mx',
-        style: TextStyle(fontSize: 14),
+      accountEmail: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(_correoDisplay, style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Text(
+              'DOCENTE',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
       currentAccountPicture: CircleAvatar(
         backgroundColor: Colors.white,
-        child: Icon(
-          Icons.person_outline_rounded,
-          size: 45,
-          color: Colors.purple.shade700,
+        child: Text(
+          _nombreDisplay.isNotEmpty ? _nombreDisplay[0].toUpperCase() : 'P',
+          style: TextStyle(
+            fontSize: 28,
+            color: Colors.deepPurple.shade700,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
       decoration: BoxDecoration(

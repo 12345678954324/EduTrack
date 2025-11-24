@@ -1,7 +1,6 @@
-// Archivo: lib/register_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/api_service.dart';
 import 'login_page.dart';
 import 'main_layout.dart';
 import 'pantallasmaestros/main_layout_maestros_screen.dart';
@@ -14,20 +13,24 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
+  // Controladores
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
-  final TextEditingController matriculaController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
-  String userType = "Alumno"; // Alumno o Maestro
-  String institution = "Universidad";
+  String userType = "Alumno";
+  bool _isLoading = false;
 
-  void register() {
-    // Validar campos vacíos
+  // VARIABLES PARA VISIBILIDAD DE CONTRASEÑA 👁️
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  void register() async {
+    // 1. Validar campos vacíos
     if (nameController.text.isEmpty ||
         emailController.text.isEmpty ||
-        matriculaController.text.isEmpty ||
         passwordController.text.isEmpty ||
         confirmPasswordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -36,7 +39,7 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Validar que las contraseñas coincidan
+    // 2. Validar coincidencia
     if (passwordController.text != confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Las contraseñas no coinciden")),
@@ -44,56 +47,90 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // Validar longitud de contraseña
+    // 3. Validar longitud
     if (passwordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("La contraseña debe tener al menos 6 caracteres")),
+        const SnackBar(
+          content: Text("La contraseña debe tener al menos 6 caracteres"),
+        ),
       );
       return;
     }
 
-    // Guardar credenciales localmente (shared_preferences)
-    _saveCredentials(
-      nameController.text.trim(),
-      passwordController.text,
-      userType,
-    );
+    setState(() => _isLoading = true);
 
-    // Mostrar mensaje de éxito
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("¡Bienvenido $userType!")),
-    );
+    try {
+      // 4. Registro en DB
+      await ApiService.registerUser(
+        nameController.text.trim(),
+        emailController.text.trim(),
+        passwordController.text.trim(),
+        userType,
+      );
 
-    // Redirigir según el tipo de usuario
-    Future.delayed(const Duration(milliseconds: 500), () {
-      // Construimos displayName a partir del nombre completo
-      final raw = nameController.text.trim();
-      final displayName = raw.isNotEmpty ? raw.split(' ')[0] : 'Alumno';
-      String displayNameNormalized = displayName;
-      if (displayNameNormalized.isNotEmpty) {
-        displayNameNormalized = displayNameNormalized[0].toUpperCase() + displayNameNormalized.substring(1);
-      }
+      // 5. Auto-Login
+      final usuario = await ApiService.loginUser(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+        userType,
+      );
 
-      if (userType == "Maestro") {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
+      // 6. Guardar sesión
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('saved_username', emailController.text.trim());
+      await prefs.setString('saved_password', passwordController.text.trim());
+      await prefs.setString('saved_userType', userType);
+      await prefs.setString('saved_name', usuario['nombre']);
+      await prefs.setInt('saved_id', usuario['id']);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("¡Bienvenido ${usuario['nombre']}!"),
+            backgroundColor: Colors.green,
+          ),
         );
-      } else {
-        // Alumno
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => MainLayout(username: displayNameNormalized)),
+        _navegarAlHome();
+      }
+    } catch (e) {
+      if (mounted) {
+        final errorMessage = e.toString().replaceAll('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(child: Text(errorMessage)),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
-    });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  Future<void> _saveCredentials(String username, String password, String type) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('saved_username', username);
-    await prefs.setString('saved_password', password);
-    await prefs.setString('saved_userType', type);
+  void _navegarAlHome() {
+    final raw = nameController.text.trim();
+    final displayName = raw.isNotEmpty ? raw.split(' ')[0] : 'Usuario';
+
+    if (userType == "Maestro" || userType == "Profesor") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MainLayout(username: displayName),
+        ),
+      );
+    }
   }
 
   @override
@@ -118,7 +155,11 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             child: Column(
               children: [
-                const Icon(Icons.person_add, size: 90, color: Colors.deepPurple),
+                const Icon(
+                  Icons.person_add,
+                  size: 90,
+                  color: Colors.deepPurple,
+                ),
                 const SizedBox(height: 15),
                 const Text(
                   "Registro",
@@ -131,6 +172,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: nameController,
                   decoration: InputDecoration(
                     labelText: "Nombre completo",
+                    prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -138,11 +180,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 15),
 
-                // Email
+                // Correo
                 TextField(
                   controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: "Correo",
+                    labelText: "Correo electrónico",
+                    prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -150,32 +194,19 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 15),
 
-                // Matrícula
-                TextField(
-                  controller: matriculaController,
-                  decoration: InputDecoration(
-                    labelText: "Matrícula",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-
-                // Tipo de usuario
-                DropdownButtonFormField(
+                // Tipo usuario
+                DropdownButtonFormField<String>(
                   value: userType,
                   items: const [
                     DropdownMenuItem(value: "Alumno", child: Text("Alumno")),
                     DropdownMenuItem(value: "Maestro", child: Text("Maestro")),
                   ],
                   onChanged: (value) {
-                    setState(() {
-                      userType = value.toString();
-                    });
+                    setState(() => userType = value.toString());
                   },
                   decoration: InputDecoration(
                     labelText: "Tipo de usuario",
+                    prefixIcon: const Icon(Icons.school_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -183,34 +214,27 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 15),
 
-                // Institución
-                DropdownButtonFormField(
-                  value: institution,
-                  items: const [
-                    DropdownMenuItem(value: "Universidad", child: Text("Universidad")),
-                    DropdownMenuItem(value: "Preparatoria", child: Text("Preparatoria")),
-                    DropdownMenuItem(value: "Secundaria", child: Text("Secundaria")),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      institution = value.toString();
-                    });
-                  },
-                  decoration: InputDecoration(
-                    labelText: "Institución",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 15),
-
-                // Contraseña
+                // --- CONTRASEÑA (CON OJITO) ---
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword, // Variable de estado
                   decoration: InputDecoration(
                     labelText: "Contraseña",
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    // Botón para mostrar/ocultar
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -218,12 +242,27 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 15),
 
-                // Confirmar contraseña
+                // --- CONFIRMAR CONTRASEÑA (CON OJITO) ---
                 TextField(
                   controller: confirmPasswordController,
-                  obscureText: true,
+                  obscureText: _obscureConfirmPassword, // Variable de estado
                   decoration: InputDecoration(
                     labelText: "Confirmar Contraseña",
+                    prefixIcon: const Icon(Icons.lock_reset),
+                    // Botón para mostrar/ocultar
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -232,10 +271,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 20),
 
+                // Botón Registrar
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: register,
+                    onPressed: _isLoading ? null : register,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
@@ -244,19 +284,31 @@ class _RegisterPageState extends State<RegisterPage> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    child: const Text(
-                      "Registrar",
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "Registrar",
+                            style: TextStyle(fontSize: 18),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 10),
 
+                // Ir al Login
                 TextButton(
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const LoginPage()),
+                      MaterialPageRoute(
+                        builder: (context) => const LoginPage(),
+                      ),
                     );
                   },
                   child: const Text("¿Ya tienes cuenta? Inicia sesión"),

@@ -1,28 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
-import 'dart:async';
+import '../services/api_service.dart'; // Conexión real a datos
 
-// ------------------------------------------------------------------
-// 1. FUNCIÓN SIMULADA DE BASE DE DATOS
-// ------------------------------------------------------------------
-Future<double> fetchAverageFromDatabase() async {
-  await Future.delayed(const Duration(seconds: 2));
-  return 7.0; // Puedes cambiar el promedio para probar
-}
-
-// ------------------------------------------------------------------
-// 2. STUDENTDASHBOARDSCREEN (Tu pantalla principal)
-// ------------------------------------------------------------------
 class StudentDashboardScreen extends StatefulWidget {
-  const StudentDashboardScreen({super.key});
+  final int userId; // ID requerido para cargar datos
+
+  const StudentDashboardScreen({super.key, required this.userId});
 
   @override
   State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
 }
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
-  double currentAverage = 0.0;
+  // Usamos el modelo DashboardData del ApiService
+  DashboardData? dashboardData;
   bool isLoading = true;
+  String? errorMessage;
 
   @override
   void initState() {
@@ -30,115 +23,87 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     _loadAcademicData();
   }
 
+  // Carga datos reales desde la API
   void _loadAcademicData() async {
     setState(() {
       isLoading = true;
+      errorMessage = null;
     });
 
-    double fetchedAverage = await fetchAverageFromDatabase();
-
-    if (mounted) {
-      setState(() {
-        currentAverage = fetchedAverage;
-        isLoading = false;
-      });
+    try {
+      DashboardData data = await ApiService.getStudentDashboard(widget.userId);
+      if (mounted) {
+        setState(() {
+          dashboardData = data;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          errorMessage = 'Error: $e';
+          isLoading = false;
+        });
+      }
     }
-  }
-
-  void _navigateToHistorial(BuildContext context) {
-    print('Navegando a Historial Académico...');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: null, // <--- quita menú lateral
-      endDrawer: null, // <--- quita icono de perfil automático
-      // ------------------------------------------------------------------
-      // BOTÓN inferior
-      // ------------------------------------------------------------------
-      bottomSheet: Container(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 25),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: ElevatedButton.icon(
-          onPressed: () => _navigateToHistorial(context),
-          icon: const Icon(Icons.school, color: Colors.white),
-          label: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            child: Text(
-              'VER CALIFICACIONES',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+      // ❌ SIN AppBar (lo maneja MainLayout)
+      // ❌ SIN BottomSheet (el historial ahora está en el menú principal)
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF673AB7)),
+            )
+          : errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red, size: 50),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(errorMessage!, textAlign: TextAlign.center),
+                  ),
+                  ElevatedButton(
+                    onPressed: _loadAcademicData,
+                    child: const Text("Reintentar"),
+                  ),
+                ],
+              ),
+            )
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Center(
+                      child: AverageCircleWidget(
+                        average: dashboardData!.average,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    AcademicDetailsSection(data: dashboardData!),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF673AB7),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30.0),
-            ),
-            elevation: 0,
-            minimumSize: const Size(double.infinity, 50),
-          ),
-        ),
-      ),
-
-      // ------------------------------------------------------------------
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Center(
-                child: isLoading
-                    ? const SizedBox(
-                        height: 200,
-                        width: 200,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF673AB7),
-                            strokeWidth: 8.0,
-                          ),
-                        ),
-                      )
-                    : AverageCircleWidget(average: currentAverage),
-              ),
-
-              const SizedBox(height: 20),
-              const AcademicDetailsSection(),
-              const SizedBox(height: 100),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
 
-// ------------------------------------------------------------------
-// 3. WIDGET DEL CÍRCULO
-// ------------------------------------------------------------------
+// Widget circular del promedio
 class AverageCircleWidget extends StatelessWidget {
   final double average;
-
   const AverageCircleWidget({super.key, required this.average});
 
   @override
   Widget build(BuildContext context) {
-    final double percent = average / 10.0;
-
+    final double percent = (average / 10.0).clamp(0.0, 1.0);
     String ratingText;
     Color progressColor;
 
@@ -156,70 +121,64 @@ class AverageCircleWidget extends StatelessWidget {
       progressColor = const Color(0xFFF44336);
     }
 
-    return Center(
-      child: CircularPercentIndicator(
-        radius: 100.0,
-        lineWidth: 15.0,
-        percent: percent,
-        progressColor: progressColor,
-        backgroundColor: const Color(0xFFF0F0F5),
-        circularStrokeCap: CircularStrokeCap.round,
-        animation: true,
-        animationDuration: 1000,
-        center: Container(
-          width: 170,
-          height: 170,
-          decoration: const BoxDecoration(
-            color: Color(0xFF673AB7),
-            shape: BoxShape.circle,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Text(
-                average.toStringAsFixed(1),
+    return CircularPercentIndicator(
+      radius: 100.0,
+      lineWidth: 15.0,
+      percent: percent,
+      progressColor: progressColor,
+      backgroundColor: const Color(0xFFF0F0F5),
+      circularStrokeCap: CircularStrokeCap.round,
+      animation: true,
+      animationDuration: 1000,
+      center: Container(
+        width: 170,
+        height: 170,
+        decoration: const BoxDecoration(
+          color: Color(0xFF673AB7),
+          shape: BoxShape.circle,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            Text(
+              average.toStringAsFixed(1),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 50,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const Text(
+              'Promedio general',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                ratingText,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 50,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const Text(
-                'Promedio general',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-              ),
-              const SizedBox(height: 5),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  ratingText,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ------------------------------------------------------------------
-// 4. SECCIÓN DE DETALLES
-// ------------------------------------------------------------------
+// Sección de detalles académicos
 class AcademicDetailsSection extends StatelessWidget {
-  const AcademicDetailsSection({super.key});
+  final DashboardData data;
+  const AcademicDetailsSection({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -236,16 +195,15 @@ class AcademicDetailsSection extends StatelessWidget {
           ),
         ),
 
-        _buildDetailRow(Icons.menu_book, 'Carrera: Ingeniería de Software'),
+        _buildDetailRow(Icons.person, 'Alumno: ${data.student.nombre}'),
         const SizedBox(height: 10),
-
-        _buildDetailRow(Icons.assignment_ind_outlined, 'Matrícula: 20230045'),
+        _buildDetailRow(Icons.menu_book, 'Carrera: ${data.student.carrera}'),
         const SizedBox(height: 10),
-
         _buildDetailRow(
-          Icons.calendar_month,
-          'Próximo Evento: Examen Final - 20 Nov.',
+          Icons.assignment_ind_outlined,
+          'ID: ${data.student.matricula}',
         ),
+
         const SizedBox(height: 25),
 
         const Text(
@@ -257,13 +215,15 @@ class AcademicDetailsSection extends StatelessWidget {
             height: 2,
           ),
         ),
+        const SizedBox(height: 10),
 
-        _buildSubjectItem('Desarrollo Móvil (Próxima entrega)'),
-        _buildSubjectItem('Álgebra Lineal (Reprobada - 6.5)'),
-        _buildSubjectItem('Estructuras de Datos (Aprobada - 8.9)'),
-        _buildSubjectItem('Lógica Digital'),
-        _buildSubjectItem('Cálculo Integral'),
-        _buildSubjectItem('Fundamentos de Economía'),
+        if (data.subjects.isEmpty)
+          const Text(
+            "No tienes materias activas.",
+            style: TextStyle(color: Colors.grey),
+          )
+        else
+          ...data.subjects.map((s) => _buildSubjectItem(s)),
       ],
     );
   }
@@ -271,26 +231,50 @@ class AcademicDetailsSection extends StatelessWidget {
   Widget _buildDetailRow(IconData icon, String text) {
     return Row(
       children: <Widget>[
-        Icon(icon, color: Colors.deepPurple, size: 28),
+        Icon(icon, color: const Color(0xFF673AB7), size: 28),
         const SizedBox(width: 15),
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey[700],
-            fontWeight: FontWeight.w500,
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSubjectItem(String subjectName) {
+  Widget _buildSubjectItem(Subject subject) {
+    String info = subject.estado;
+    Color colorInfo = subject.estado == 'Aprobada'
+        ? Colors.green
+        : (subject.estado == 'Reprobada' ? Colors.red : Colors.grey);
+    String displayText = subject.materia;
+    if (subject.calificacion != null)
+      displayText += ' (${subject.calificacion})';
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5.0),
-      child: Text(
-        subjectName,
-        style: const TextStyle(fontSize: 16, color: Colors.black87),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              displayText,
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+          ),
+          Text(
+            info,
+            style: TextStyle(
+              color: colorInfo,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

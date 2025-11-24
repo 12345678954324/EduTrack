@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'services/api_service.dart';
 import 'register_page.dart';
-import 'main_layout.dart'; // Layout de Alumnos
-import 'pantallasmaestros/main_layout_maestros_screen.dart'; // Layout de Maestros (IMPORTANTE)
+import 'main_layout.dart';
+import 'pantallasmaestros/main_layout_maestros_screen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,65 +16,82 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  String userType = "Alumno"; // Valor inicial
+  String userType = "Alumno";
+  bool _isLoading = false;
+  bool _obscurePassword = true;
 
-  void login() {
-    // Validación básica
+  void login() async {
     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Por favor completa todos los campos")),
       );
       return;
     }
-    // Verificar credenciales guardadas
-    _verifyAndLogin();
+
+    setState(() => _isLoading = true);
+
+    try {
+      final usuario = await ApiService.loginUser(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+        userType,
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('saved_username', emailController.text.trim());
+      await prefs.setString('saved_password', passwordController.text.trim());
+      await prefs.setString('saved_userType', userType);
+
+      // Guardamos ID como entero
+      int userId = usuario['id'];
+      await prefs.setInt('saved_id', userId);
+      await prefs.setString('saved_name', usuario['nombre']);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Bienvenido ${usuario['nombre']}"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _navegarAlHome(usuario);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  Future<void> _verifyAndLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedUsername = prefs.getString('saved_username');
-    final savedPassword = prefs.getString('saved_password');
-    final savedUserType = prefs.getString('saved_userType') ?? 'Alumno';
+  void _navegarAlHome(Map<String, dynamic> usuario) {
+    final rawName = usuario['nombre'] ?? 'Usuario';
+    final displayName = rawName.toString().split(' ')[0];
+    final int userId = usuario['id'];
 
-    if (savedUsername == null || savedPassword == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay una cuenta registrada. Regístrate primero.')),
+    if (userType == "Alumno") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              MainLayout(username: displayName, usuarioId: userId),
+        ),
       );
-      return;
-    }
-
-    final inputUsername = emailController.text.trim();
-    final inputPassword = passwordController.text;
-
-    if (inputUsername == savedUsername && inputPassword == savedPassword && userType == savedUserType) {
-      // Construimos displayName a partir del username (nombre)
-      final raw = inputUsername;
-      final displayName = raw.isNotEmpty ? raw.split(' ')[0] : raw;
-      String displayNameNormalized = displayName;
-      if (displayNameNormalized.isNotEmpty) {
-        displayNameNormalized = displayNameNormalized[0].toUpperCase() + displayNameNormalized.substring(1);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Bienvenido $userType")));
-
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (userType == "Alumno") {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MainLayout(username: displayNameNormalized),
-            ),
-          );
-        } else if (userType == "Maestro") {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
-          );
-        }
-      });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Usuario o contraseña incorrectos')),
+      // Maestro
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          // 🚨 CORRECCIÓN: MainLayoutMaestros no recibía parámetros antes.
+          // Ahora usamos el constructor por defecto, ya que él lee de SharedPreferences en su initState.
+          builder: (context) => const MainLayoutMaestros(),
+        ),
       );
     }
   }
@@ -100,22 +118,29 @@ class _LoginPageState extends State<LoginPage> {
             ),
             child: Column(
               children: [
-                const Icon(
-                  Icons.school_rounded,
-                  size: 90,
-                  color: Colors.deepPurple,
+                Image.asset(
+                  'lib/image/logotipo.png',
+                  height: 250,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.school_rounded,
+                      size: 90,
+                      color: Colors.deepPurple,
+                    );
+                  },
                 ),
-                const SizedBox(height: 15),
                 const Text(
                   "Inicio de Sesión",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 const SizedBox(height: 20),
                 TextField(
                   controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: "Usuario",
-                    prefixIcon: const Icon(Icons.person_outline),
+                    labelText: "Correo",
+                    prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -124,18 +149,29 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 15),
                 TextField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: "Contraseña",
                     prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
                 ),
                 const SizedBox(height: 15),
-
-                // SELECTOR DE ROL (ALUMNO / MAESTRO)
                 DropdownButtonFormField<String>(
                   value: userType,
                   items: const [
@@ -148,8 +184,8 @@ class _LoginPageState extends State<LoginPage> {
                     });
                   },
                   decoration: InputDecoration(
-                    labelText: "Tipo de usuario",
-                    prefixIcon: const Icon(Icons.person_outline),
+                    labelText: "Soy...",
+                    prefixIcon: const Icon(Icons.person_pin_circle_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -159,7 +195,7 @@ class _LoginPageState extends State<LoginPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: login,
+                    onPressed: _isLoading ? null : login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
@@ -168,10 +204,19 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    child: const Text(
-                      "Ingresar",
-                      style: TextStyle(fontSize: 18),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "Ingresar",
+                            style: TextStyle(fontSize: 18),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 10),

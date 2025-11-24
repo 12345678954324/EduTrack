@@ -1,7 +1,89 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
 
-class PanelDocenteScreen extends StatelessWidget {
+class PanelDocenteScreen extends StatefulWidget {
   const PanelDocenteScreen({super.key});
+
+  @override
+  State<PanelDocenteScreen> createState() => _PanelDocenteScreenState();
+}
+
+class _PanelDocenteScreenState extends State<PanelDocenteScreen> {
+  // Variables de estado
+  int _profesorId = 0;
+  String _nombreProfesor = "Profesor";
+
+  // Datos Dinámicos
+  String _claseEnCurso = "Cargando...";
+  String _subClaseEnCurso = "";
+  int _totalGrupos = 0;
+  int _totalAlumnos = 0;
+  bool _isLoading = true;
+  String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarDatosIniciales();
+  }
+
+  Future<void> _cargarDatosIniciales() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getInt('saved_id') ?? 0;
+    final nombre = prefs.getString('saved_name') ?? "Profesor";
+
+    setState(() {
+      _profesorId = id;
+      _nombreProfesor = nombre.split(' ')[0]; // Usamos solo el primer nombre
+    });
+
+    if (id != 0) {
+      await _cargarEstadisticas(id);
+    } else {
+      // Si no hay ID (no logueado), mostramos error
+      setState(() {
+        _isLoading = false;
+        _errorMsg = "Error: No se encontró ID de usuario logueado.";
+      });
+    }
+  }
+
+  Future<void> _cargarEstadisticas(int profesorId) async {
+    try {
+      // Cargamos stats generales (grupos/alumnos)
+      final stats = await ApiService.getProfesorStats(profesorId);
+
+      // Cargamos la lista de grupos asignados para simular la clase en curso
+      final gruposAsignados = await ApiService.getGrupos();
+
+      if (mounted) {
+        setState(() {
+          _totalGrupos = stats['grupos'] ?? 0;
+          _totalAlumnos = stats['alumnos'] ?? 0;
+          _isLoading = false;
+
+          // Simulación de "Clase en Curso" (usamos la primera de la lista como ejemplo)
+          if (gruposAsignados.isNotEmpty) {
+            final primeraClase = gruposAsignados.first;
+            _claseEnCurso = primeraClase.materia;
+            _subClaseEnCurso = "Grupo ${primeraClase.nombre}";
+          } else {
+            _claseEnCurso = "Sin Clases Asignadas";
+            _subClaseEnCurso = "Consulta Mis Grupos";
+          }
+        });
+      }
+    } catch (e) {
+      print("Error cargando estadísticas: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMsg = "Error de conexión con el servidor. Intenta reiniciar.";
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,49 +94,71 @@ class PanelDocenteScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "¡Bienvenido, Profesor!",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+            Text(
+              "¡Bienvenido, $_nombreProfesor!",
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.deepPurple,
+              ),
             ),
             const SizedBox(height: 5),
             Text(
-              "Ciclo Escolar 2025 - 2026",
+              "Panel de Control Docente",
               style: TextStyle(color: Colors.grey[600], fontSize: 16),
-          ),
-          const SizedBox(height: 20),
+            ),
+            const SizedBox(height: 20),
 
-          // Tarjeta de Clase Actual
-          _infoCard(
-            title: "Clase en curso",
-            content: "Desarrollo Móvil Integral",
-            subContent: "Grupo TI-51 • Aula A-12",
-            icon: Icons.access_time_filled_rounded,
-            color: Colors.purple,
-          ),
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (_errorMsg != null)
+              Center(
+                child: Text(
+                  _errorMsg!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              )
+            else
+              Column(
+                children: [
+                  // Tarjeta de Clase Actual (Datos Dinámicos)
+                  _infoCard(
+                    title: "Clase en curso (Materia asignada)",
+                    content: _claseEnCurso,
+                    subContent: _subClaseEnCurso,
+                    icon: Icons.access_time_filled_rounded,
+                    color: Colors.purple,
+                  ),
 
-          const SizedBox(height: 15),
+                  const SizedBox(height: 15),
 
-          // Tarjeta de Pendientes
-          _infoCard(
-            title: "Pendientes",
-            content: "Subir calificaciones del 1er Parcial",
-            subContent: "Vence: 15 Octubre",
-            icon: Icons.warning_amber_rounded,
-            color: Colors.orange,
-          ),
+                  // Tarjeta de Pendientes (Fijo - Puedes conectar a Notificaciones si gustas)
+                  _infoCard(
+                    title: "Pendientes",
+                    content: "Subir calificaciones del 1er Parcial",
+                    subContent: "Vence: 15 Octubre",
+                    icon: Icons.warning_amber_rounded,
+                    color: Colors.orange,
+                  ),
 
-          const SizedBox(height: 15),
+                  const SizedBox(height: 15),
 
-          // Estadísticas rápidas
-          Row(
-            children: [
-              Expanded(child: _statCard("4", "Grupos")),
-              const SizedBox(width: 15),
-              Expanded(child: _statCard("120", "Alumnos")),
-            ],
-          ),
-        ],
-      ),
+                  // Estadísticas rápidas (Datos Dinámicos)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _statCard("$_totalGrupos", "Grupos Asignados"),
+                      ),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: _statCard("$_totalAlumnos", "Alumnos Únicos"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
