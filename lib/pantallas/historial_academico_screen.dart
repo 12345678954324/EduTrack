@@ -129,8 +129,6 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
         backgroundColor: Colors.orange,
         child: const Icon(Icons.message, color: Colors.white),
       ),
-
-      bottomNavigationBar: _buildBottomBar(context),
     );
   }
 
@@ -207,34 +205,6 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
             MaterialPageRoute(
               builder: (_) => DetallesMateriaScreen(materia: materia),
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // BOTTOM BAR
-  // ---------------------------------------------------------------------------
-  Widget _buildBottomBar(BuildContext context) {
-    return BottomAppBar(
-      child: TextButton.icon(
-        icon: const Icon(Icons.home, color: Colors.teal),
-        label: const Text(
-          "Volver al inicio",
-          style: TextStyle(color: Colors.teal),
-        ),
-        onPressed: () {
-          // Navegar de vuelta a MainLayout y seleccionar la pestaña 0 (Dashboard)
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MainLayout(
-                username: 'Usuario', // Aquí pasa tu nombre real si lo tienes
-                usuarioId: widget.alumnoId, // El ID del alumno
-              ),
-            ),
-            (route) => false, // elimina todo lo anterior
           );
         },
       ),
