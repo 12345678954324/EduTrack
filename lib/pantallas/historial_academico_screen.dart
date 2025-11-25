@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import 'detalles_materia_screen.dart';
 import 'student_dashboard_screen.dart';
 import 'package:app_calificaciones/main_layout.dart';
+import '/soporte/solucion1_soporte.dart'; // 🚨 Importa la pantalla de soporte
 
 class HistorialAcademicoScreen extends StatefulWidget {
   final int alumnoId;
@@ -21,6 +22,7 @@ class HistorialAcademicoScreen extends StatefulWidget {
 }
 
 class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
+  // Variables de estado
   Map<String, List<Materia>> historial = {};
   String? semestreSeleccionado;
   bool loading = true;
@@ -42,6 +44,7 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
     });
 
     try {
+      // 🚨 Llamada al servicio API (debe devolver Map<String, List<Materia>>)
       final data = await ApiService.getHistorialAcademico(widget.alumnoId);
 
       setState(() {
@@ -120,20 +123,28 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
         ],
       ),
 
+      // 🚨 BOTÓN FLOTANTE (NAVEGACIÓN)
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Abrir mensajería de EduTrack...")),
+          // ⚠️ CORRECCIÓN: Quitar 'const' si Solucion1Soporte es StatefulWidget
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => Solution1Soporte()),
           );
         },
         backgroundColor: Colors.orange,
         child: const Icon(Icons.message, color: Colors.white),
       ),
+
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
+      // 5. Barra de Navegación Inferior (Para 'Volver a inicio')
+      bottomNavigationBar: _buildBottomBar(context),
     );
   }
 
   // ---------------------------------------------------------------------------
-  // SELECTOR DE SEMESTRE
+  // SELECTOR DE SEMESTRE (MÉTODOS AUXILIARES)
   // ---------------------------------------------------------------------------
   Widget _buildSemestreSelector() {
     return Container(
@@ -171,7 +182,7 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // CARD DE MATERIA
+  // CARD DE MATERIA (MÉTODOS AUXILIARES)
   // ---------------------------------------------------------------------------
   Widget _buildMateriaCard(Materia materia) {
     double nota = materia.calificacionFinal;
@@ -200,6 +211,7 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
           ),
         ),
         onTap: () {
+          // Navegación a DetallesMateriaScreen
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -207,6 +219,32 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // BARRA INFERIOR (MÉTODOS AUXILIARES)
+  // ---------------------------------------------------------------------------
+  Widget _buildBottomBar(BuildContext context) {
+    return BottomAppBar(
+      color: Colors.white,
+      elevation: 5,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextButton.icon(
+            icon: const Icon(Icons.home, color: Colors.teal),
+            label: const Text(
+              'Volver a Inicio',
+              style: TextStyle(color: Colors.teal, fontWeight: FontWeight.w600),
+            ),
+            onPressed: () {
+              // Vuelve a la pantalla principal
+              Navigator.pop(context);
+            },
+          ),
+        ],
       ),
     );
   }
