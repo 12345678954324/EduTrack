@@ -109,27 +109,6 @@ class _Solution4SoporteState extends State<Solution4Soporte> {
             ),
             const SizedBox(height: 12),
 
-            // Botón Volver a Inicio
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () =>
-                    Navigator.of(context).popUntil((route) => route.isFirst),
-                icon: const Icon(Icons.home),
-                label: const Text('Volver a inicio'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple.shade50,
-                  foregroundColor: Colors.deepPurple,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: const BorderSide(color: Colors.deepPurple),
-                  ),
-                ),
-              ),
-            ),
-
             const SizedBox(height: 20),
             const Text('1. Verifica tu conexión a internet'),
             const Text('2. Espera unos minutos y actualiza la página'),

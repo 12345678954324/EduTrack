@@ -6,7 +6,7 @@ import '/pantallas/materia_models.dart'; // <-- IMPORTA TU MODELO DE MATERIAS Y 
 // SERVICIO API
 // ==========================================
 class ApiService {
-  static const String baseUrl = 'http://192.168.0.83:3000';
+  static const String baseUrl = 'http://localhost:3000';
 
   // ---------------------------------------------------------
   // 1. OBTENER GRUPOS (MATERIAS ASIGNADAS)

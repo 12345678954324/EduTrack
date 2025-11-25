@@ -15,7 +15,7 @@ app.use(express.json());
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: 'MYSQLDIEGO', // <--- TU CONTRASEÑA
+  password: 'admin', // <--- TU CONTRASEÑA
   database: 'edutrack'
 });
 
@@ -479,5 +479,5 @@ app.get('/historial_academico/:alumnoId', (req, res) => {
 
 // INICIAR SERVIDOR
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Servidor corriendo en http://192.168.0.5:${PORT}`);
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
