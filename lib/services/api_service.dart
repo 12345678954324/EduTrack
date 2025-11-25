@@ -6,7 +6,7 @@ import '/pantallas/materia_models.dart'; // <-- IMPORTA TU MODELO DE MATERIAS Y 
 // SERVICIO API
 // ==========================================
 class ApiService {
-  static const String baseUrl = 'http://localhost:3000';
+  static const String baseUrl = 'http://192.168.0.5:3000';
 
   // ---------------------------------------------------------
   // 1. OBTENER GRUPOS (MATERIAS ASIGNADAS)
@@ -16,7 +16,7 @@ class ApiService {
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
       return data
-          .map((item) => Grupo.fromJson(item as Map<String, dynamic>))
+          .map((jsonItem) => Grupo.fromJson(jsonItem as Map<String, dynamic>))
           .toList();
     } else {
       throw Exception('Error al cargar grupos');

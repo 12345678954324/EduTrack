@@ -6,6 +6,7 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
+
 // MIDDLEWARE
 app.use(cors());
 app.use(express.json());
@@ -14,7 +15,7 @@ app.use(express.json());
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: 'Saul2006', // <--- TU CONTRASEÑA
+  password: 'MYSQLDIEGO', // <--- TU CONTRASEÑA
   database: 'edutrack'
 });
 
@@ -477,6 +478,6 @@ app.get('/historial_academico/:alumnoId', (req, res) => {
 
 
 // INICIAR SERVIDOR
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Servidor corriendo en http://192.168.0.5:${PORT}`);
 });

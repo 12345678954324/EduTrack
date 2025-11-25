@@ -61,6 +61,9 @@ class DetallesMateriaScreen extends StatelessWidget {
           ),
         ),
       ),
+
+      // 🔙 BOTÓN PARA VOLVER A LA PANTALLA ANTERIOR
+      bottomNavigationBar: _buildBottomBar(context),
     );
   }
 
@@ -161,6 +164,19 @@ class DetallesMateriaScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // 🔙 BOTÓN PARA VOLVER A LA PANTALLA ANTERIOR
+  Widget _buildBottomBar(BuildContext context) {
+    return BottomAppBar(
+      child: TextButton.icon(
+        icon: const Icon(Icons.arrow_back, color: Colors.teal),
+        label: const Text("Volver", style: TextStyle(color: Colors.teal)),
+        onPressed: () {
+          Navigator.pop(context); // ⬅ Regresa a StudentDashboardScreen
+        },
       ),
     );
   }

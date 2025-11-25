@@ -2,24 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // IMPORTS DE PANTALLAS
-// import 'pantallas/inicio_screen.dart'; // <--- YA NO NECESITAMOS ESTE
-import 'pantallas/historial_academico_screen.dart'; // <--- NUEVO
+import 'pantallas/historial_academico_screen.dart';
 import 'pantallas/calendario_screen.dart';
 import 'pantallas/ayuda_screen.dart';
 import 'pantallas/notificaciones.dart';
 import 'login_page.dart';
-
-// IMPORTANTE: Importa tu nueva pantalla del Dashboard
 import 'pantallas/student_dashboard_screen.dart';
 
 class MainLayout extends StatefulWidget {
   final String username;
-  final int usuarioId; // Este ID es vital para traer las calificaciones
+  final int usuarioId;
 
   const MainLayout({
     super.key,
-    this.username = 'Alumno',
-    this.usuarioId = 3, // ID por defecto o el que viene del Login
+    required this.username,
+    required this.usuarioId,
   });
 
   @override
@@ -28,8 +25,6 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
-
-  // Variables para los datos del encabezado
   String _nombreDisplay = '';
   String _correoDisplay = '';
   String _rolDisplay = '';
@@ -39,6 +34,7 @@ class _MainLayoutState extends State<MainLayout> {
     super.initState();
     _nombreDisplay = widget.username;
     _cargarDatosUsuario();
+    _cargarIndiceGuardado(); // <- carga el índice guardado
   }
 
   Future<void> _cargarDatosUsuario() async {
@@ -47,33 +43,46 @@ class _MainLayoutState extends State<MainLayout> {
       _correoDisplay =
           prefs.getString('saved_username') ?? 'correo@ejemplo.com';
       _rolDisplay = prefs.getString('saved_userType') ?? 'Alumno';
-
       if (_nombreDisplay == 'Alumno' || _nombreDisplay.isEmpty) {
         _nombreDisplay = _correoDisplay.split('@')[0];
       }
     });
   }
 
-  // Pantallas del menú
+  Future<void> _cargarIndiceGuardado() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedIndex = prefs.getInt('selectedIndex') ?? 0;
+    setState(() {
+      _selectedIndex = savedIndex;
+    });
+  }
+
   List<Widget> get _widgetOptions => <Widget>[
     StudentDashboardScreen(userId: widget.usuarioId),
-    HistorialAcademicoScreen(alumnoId: widget.usuarioId), // <--- REEMPLAZADO
-    const CalendarioScreen(),
-    const AyudaScreen(),
+    HistorialAcademicoScreen(
+      alumnoId: widget.usuarioId,
+      onNavigate: _onSelectItem,
+    ),
+    CalendarioScreen(onNavigate: _onSelectItem),
+    AyudaScreen(),
   ];
 
   static const List<String> _titles = [
     'Mi Desempeño',
-    'Historial Académico', // <--- CAMBIADO
+    'Historial Académico',
     'Calendario Escolar',
     'Ayuda y Soporte',
   ];
 
-  void _onSelectItem(int index) {
+  void _onSelectItem(int index) async {
+    // Guardar el índice seleccionado
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('selectedIndex', index);
+
+    // Cambiar pantalla
     setState(() {
       _selectedIndex = index;
     });
-    Navigator.of(context).pop();
   }
 
   @override
@@ -115,8 +124,8 @@ class _MainLayoutState extends State<MainLayout> {
                       index: 0,
                     ),
                     _buildDrawerItem(
-                      icon: Icons.school_rounded, // <--- NUEVO ÍCONO
-                      text: 'Historial Académico', // <--- CAMBIADO
+                      icon: Icons.school_rounded,
+                      text: 'Historial Académico',
                       index: 1,
                     ),
                     _buildDrawerItem(
@@ -156,7 +165,7 @@ class _MainLayoutState extends State<MainLayout> {
                   ),
                   onTap: () async {
                     final prefs = await SharedPreferences.getInstance();
-                    await prefs.clear(); // Limpiamos datos al salir
+                    await prefs.clear();
 
                     if (context.mounted) {
                       Navigator.of(context).pushReplacement(
@@ -172,7 +181,6 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
       ),
-
       body: _widgetOptions.elementAt(_selectedIndex),
     );
   }
@@ -260,7 +268,14 @@ class _MainLayoutState extends State<MainLayout> {
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        onTap: () => _onSelectItem(index),
+        onTap: () async {
+          Navigator.pop(context); // cierra Drawer
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setInt('selectedIndex', index); // guarda índice
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );

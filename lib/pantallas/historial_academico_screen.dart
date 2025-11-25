@@ -2,11 +2,18 @@ import 'package:flutter/material.dart';
 import '../pantallas/materia_models.dart';
 import '../services/api_service.dart';
 import 'detalles_materia_screen.dart';
+import 'student_dashboard_screen.dart';
+import 'package:app_calificaciones/main_layout.dart';
 
 class HistorialAcademicoScreen extends StatefulWidget {
   final int alumnoId;
+  final Function(int) onNavigate; // ← callback para cambiar pestaña
 
-  const HistorialAcademicoScreen({super.key, required this.alumnoId});
+  const HistorialAcademicoScreen({
+    super.key,
+    required this.alumnoId,
+    required this.onNavigate,
+  });
 
   @override
   State<HistorialAcademicoScreen> createState() =>
@@ -214,10 +221,22 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
       child: TextButton.icon(
         icon: const Icon(Icons.home, color: Colors.teal),
         label: const Text(
-          "Volver a Inicio",
+          "Volver al inicio",
           style: TextStyle(color: Colors.teal),
         ),
-        onPressed: () => Navigator.pop(context),
+        onPressed: () {
+          // Navegar de vuelta a MainLayout y seleccionar la pestaña 0 (Dashboard)
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MainLayout(
+                username: 'Usuario', // Aquí pasa tu nombre real si lo tienes
+                usuarioId: widget.alumnoId, // El ID del alumno
+              ),
+            ),
+            (route) => false, // elimina todo lo anterior
+          );
+        },
       ),
     );
   }

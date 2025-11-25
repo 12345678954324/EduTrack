@@ -51,8 +51,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ❌ SIN AppBar (lo maneja MainLayout)
-      // ❌ SIN BottomSheet (el historial ahora está en el menú principal)
+      // SIN AppBar (lo maneja MainLayout)
+      // SIN BottomSheet (el historial ahora está en el menú principal)
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF673AB7)),

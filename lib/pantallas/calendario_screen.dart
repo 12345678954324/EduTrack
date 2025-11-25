@@ -26,7 +26,9 @@ class Evento {
 // Pantalla: CalendarioScreen
 // -------------------------
 class CalendarioScreen extends StatefulWidget {
-  const CalendarioScreen({super.key});
+  final Function(int)? onNavigate; // <--- callback opcional
+
+  const CalendarioScreen({super.key, this.onNavigate});
 
   @override
   State<CalendarioScreen> createState() => _CalendarioScreenState();
@@ -380,16 +382,12 @@ class _CalendarioScreenState extends State<CalendarioScreen>
         ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: purpleDeep),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (widget.onNavigate != null) {
+              widget.onNavigate!(0); // 0 = índice de StudentDashboardScreen
+            }
+          },
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.filter_list, color: purpleDeep),
-            onPressed: () {
-              // placeholder para filtros
-            },
-          ),
-        ],
       ),
       body: SafeArea(
         minimum: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

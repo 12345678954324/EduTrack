@@ -114,9 +114,21 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  void _navegarAlHome() {
+  void _navegarAlHome() async {
     final raw = nameController.text.trim();
     final displayName = raw.isNotEmpty ? raw.split(' ')[0] : 'Usuario';
+
+    final prefs = await SharedPreferences.getInstance();
+    final int? savedId = prefs.getInt('saved_id');
+
+    if (savedId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Error: no se pudo obtener el ID del usuario"),
+        ),
+      );
+      return;
+    }
 
     if (userType == "Maestro" || userType == "Profesor") {
       Navigator.pushReplacement(
@@ -127,7 +139,8 @@ class _RegisterPageState extends State<RegisterPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => MainLayout(username: displayName),
+          builder: (context) =>
+              MainLayout(username: displayName, usuarioId: savedId),
         ),
       );
     }
