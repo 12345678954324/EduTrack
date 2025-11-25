@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '/pantallas/materia_models.dart'; // <-- IMPORTA TU MODELO DE MATERIAS Y EVALUACIONES
+import '/pantallas/materia_models.dart'; // Asegúrate de que este archivo exista en tu proyecto
 
 // ==========================================
 // SERVICIO API
 // ==========================================
 class ApiService {
+  // NOTA: Si usas emulador Android, usa 'http://10.0.2.2:3000'
+  // Si es iOS o Web, 'http://localhost:3000' está bien.
+  // Si es dispositivo físico, usa tu IP local (ej. 'http://192.168.1.50:3000')
   static const String baseUrl = 'http://localhost:3000';
 
   // ---------------------------------------------------------
@@ -101,9 +104,10 @@ class ApiService {
   }
 
   // ---------------------------------------------------------
-  // 6. REGISTRAR USUARIO
+  // 6. REGISTRAR USUARIO (CORREGIDO)
+  // Ahora devuelve Future<int> con el ID del usuario nuevo
   // ---------------------------------------------------------
-  static Future<void> registerUser(
+  static Future<int> registerUser(
     String nombre,
     String correo,
     String contrasena,
@@ -120,7 +124,11 @@ class ApiService {
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode == 200) {
+      // ÉXITO: Decodificamos y retornamos el ID
+      final body = json.decode(response.body);
+      return body['id'];
+    } else {
       final body = json.decode(response.body);
       throw Exception(body['error'] ?? 'Error al registrar usuario');
     }
@@ -323,7 +331,7 @@ class ApiService {
 
       return semestres.map((semestre, materias) {
         final listaMaterias = (materias as List)
-            .map((m) => Materia.fromJson(m)) // <-- ASÍ SE USA TU MODELO
+            .map((m) => Materia.fromJson(m))
             .toList();
 
         return MapEntry(semestre, listaMaterias);

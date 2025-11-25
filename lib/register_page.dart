@@ -68,12 +68,16 @@ class _RegisterPageState extends State<RegisterPage> {
         userType,
       );
 
-      // 5. Auto-Login
+      // 5. Auto-Login para obtener datos completos (incluido ID)
       final usuario = await ApiService.loginUser(
         emailController.text.trim(),
         passwordController.text.trim(),
         userType,
       );
+
+      // CAPTURAMOS EL ID DEL USUARIO REGISTRADO DE FORMA SEGURA
+      // Usamos toString e int.parse para evitar errores si viene como String o Number
+      final int userId = int.tryParse(usuario['id'].toString()) ?? 0;
 
       // 6. Guardar sesión
       final prefs = await SharedPreferences.getInstance();
@@ -81,7 +85,7 @@ class _RegisterPageState extends State<RegisterPage> {
       await prefs.setString('saved_password', passwordController.text.trim());
       await prefs.setString('saved_userType', userType);
       await prefs.setString('saved_name', usuario['nombre']);
-      await prefs.setInt('saved_id', usuario['id']);
+      await prefs.setInt('saved_id', userId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -90,7 +94,8 @@ class _RegisterPageState extends State<RegisterPage> {
             backgroundColor: Colors.green,
           ),
         );
-        _navegarAlHome();
+        // PASAMOS EL ID A LA FUNCIÓN DE NAVEGACIÓN
+        _navegarAlHome(userId);
       }
     } catch (e) {
       if (mounted) {
@@ -114,7 +119,8 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  void _navegarAlHome() {
+  // AHORA RECIBE EL USER ID Y LO PASA CORRECTAMENTE A MAIN LAYOUT
+  void _navegarAlHome(int userId) {
     final raw = nameController.text.trim();
     final displayName = raw.isNotEmpty ? raw.split(' ')[0] : 'Usuario';
 
@@ -127,7 +133,11 @@ class _RegisterPageState extends State<RegisterPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => MainLayout(username: displayName),
+          builder: (context) => MainLayout(
+            username: displayName,
+            usuarioId:
+                userId, // <--- CORREGIDO: Se usa 'usuarioId' como en tu MainLayout
+          ),
         ),
       );
     }
@@ -221,7 +231,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: InputDecoration(
                     labelText: "Contraseña",
                     prefixIcon: const Icon(Icons.lock_outline),
-                    // Botón para mostrar/ocultar
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -249,7 +258,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: InputDecoration(
                     labelText: "Confirmar Contraseña",
                     prefixIcon: const Icon(Icons.lock_reset),
-                    // Botón para mostrar/ocultar
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword

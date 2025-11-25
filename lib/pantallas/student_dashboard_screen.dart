@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
-import '../services/api_service.dart'; // Conexión real a datos
+import '../services/api_service.dart'; // Asegúrate de que esta ruta coincida con tu estructura de carpetas
 
 class StudentDashboardScreen extends StatefulWidget {
-  final int userId; // ID requerido para cargar datos
+  final int userId; // ID requerido para cargar datos del alumno específico
 
   const StudentDashboardScreen({super.key, required this.userId});
 
@@ -23,7 +23,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     _loadAcademicData();
   }
 
-  // Carga datos reales desde la API
+  // Carga datos reales desde la API usando el userId recibido
   void _loadAcademicData() async {
     setState(() {
       isLoading = true;
@@ -31,6 +31,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     });
 
     try {
+      // Llamada al servicio con el ID dinámico
       DashboardData data = await ApiService.getStudentDashboard(widget.userId);
       if (mounted) {
         setState(() {
@@ -51,8 +52,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ❌ SIN AppBar (lo maneja MainLayout)
-      // ❌ SIN BottomSheet (el historial ahora está en el menú principal)
+      // ❌ SIN AppBar (lo maneja MainLayout si usas navegación anidada)
       body: isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFF673AB7)),
@@ -65,10 +65,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
                   const Icon(Icons.error_outline, color: Colors.red, size: 50),
                   Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text(errorMessage!, textAlign: TextAlign.center),
+                    child: Text(
+                      errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
                   ElevatedButton(
                     onPressed: _loadAcademicData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF673AB7),
+                      foregroundColor: Colors.white,
+                    ),
                     child: const Text("Reintentar"),
                   ),
                 ],
@@ -96,29 +104,32 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   }
 }
 
-// Widget circular del promedio
+// ==========================================
+// WIDGET: Círculo del Promedio
+// ==========================================
 class AverageCircleWidget extends StatelessWidget {
   final double average;
   const AverageCircleWidget({super.key, required this.average});
 
   @override
   Widget build(BuildContext context) {
+    // Calculamos el porcentaje (0.0 a 1.0)
     final double percent = (average / 10.0).clamp(0.0, 1.0);
     String ratingText;
     Color progressColor;
 
     if (average >= 9.1) {
       ratingText = 'Excelente';
-      progressColor = const Color(0xFF4CAF50);
+      progressColor = const Color(0xFF4CAF50); // Verde
     } else if (average >= 8.1) {
       ratingText = 'Muy Bien';
-      progressColor = const Color(0xFF2196F3);
+      progressColor = const Color(0xFF2196F3); // Azul
     } else if (average >= 7.0) {
       ratingText = 'Bien';
-      progressColor = const Color(0xFFFFC107);
+      progressColor = const Color(0xFFFFC107); // Ámbar
     } else {
       ratingText = 'Reprobatoria';
-      progressColor = const Color(0xFFF44336);
+      progressColor = const Color(0xFFF44336); // Rojo
     }
 
     return CircularPercentIndicator(
@@ -175,7 +186,9 @@ class AverageCircleWidget extends StatelessWidget {
   }
 }
 
-// Sección de detalles académicos
+// ==========================================
+// WIDGET: Detalles Académicos y Lista de Materias
+// ==========================================
 class AcademicDetailsSection extends StatelessWidget {
   final DashboardData data;
   const AcademicDetailsSection({super.key, required this.data});
@@ -218,9 +231,18 @@ class AcademicDetailsSection extends StatelessWidget {
         const SizedBox(height: 10),
 
         if (data.subjects.isEmpty)
-          const Text(
-            "No tienes materias activas.",
-            style: TextStyle(color: Colors.grey),
+          Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              "No tienes materias activas asignadas.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
           )
         else
           ...data.subjects.map((s) => _buildSubjectItem(s)),
@@ -249,32 +271,58 @@ class AcademicDetailsSection extends StatelessWidget {
 
   Widget _buildSubjectItem(Subject subject) {
     String info = subject.estado;
-    Color colorInfo = subject.estado == 'Aprobada'
-        ? Colors.green
-        : (subject.estado == 'Reprobada' ? Colors.red : Colors.grey);
-    String displayText = subject.materia;
-    if (subject.calificacion != null)
-      displayText += ' (${subject.calificacion})';
+    Color colorInfo;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              displayText,
-              style: const TextStyle(fontSize: 16, color: Colors.black87),
+    // Lógica de colores para el estado
+    if (subject.estado == 'Aprobada') {
+      colorInfo = Colors.green;
+    } else if (subject.estado == 'Reprobada') {
+      colorInfo = Colors.red;
+    } else {
+      colorInfo = Colors.orange; // Color para pendientes/cursando
+    }
+
+    String displayText = subject.materia;
+    if (subject.calificacion != null) {
+      displayText += ' (${subject.calificacion})';
+    }
+
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 6.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                displayText,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-          ),
-          Text(
-            info,
-            style: TextStyle(
-              color: colorInfo,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: colorInfo.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colorInfo.withOpacity(0.5)),
+              ),
+              child: Text(
+                info,
+                style: TextStyle(
+                  color: colorInfo,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
