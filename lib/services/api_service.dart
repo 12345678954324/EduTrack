@@ -158,7 +158,7 @@ class ApiService {
   static Future<Map<String, dynamic>> loginUser(
     String correo,
     String contrasena,
-    String tipoUsuario,
+    // String tipoUsuario,  <--- ELIMINADO: Ya no se pide este parámetro
   ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/login'),
@@ -166,7 +166,7 @@ class ApiService {
       body: json.encode({
         'correo': correo,
         'contrasena': contrasena,
-        'tipo_usuario': tipoUsuario,
+        // 'tipo_usuario': tipoUsuario, <--- ELIMINADO: Ya no se envía al servidor
       }),
     );
 

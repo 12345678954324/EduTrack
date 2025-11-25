@@ -16,7 +16,6 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  String userType = "Alumno";
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -31,18 +30,26 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
+      // 1. Llamamos al login (el servidor decide qué rol es)
       final usuario = await ApiService.loginUser(
         emailController.text.trim(),
         passwordController.text.trim(),
-        userType,
       );
+
+      // 2. Obtenemos el rol real desde la respuesta del servidor
+      // Aseguramos que venga en minúsculas para comparar fácil
+      final String rolReal = (usuario['rol'] ?? 'alumno')
+          .toString()
+          .toLowerCase();
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('saved_username', emailController.text.trim());
       await prefs.setString('saved_password', passwordController.text.trim());
-      await prefs.setString('saved_userType', userType);
 
-      // Guardamos ID como entero
+      // Guardamos el rol detectado
+      await prefs.setString('saved_userType', rolReal);
+
+      // Guardamos ID y nombre
       int userId = usuario['id'];
       await prefs.setInt('saved_id', userId);
       await prefs.setString('saved_name', usuario['nombre']);
@@ -54,7 +61,8 @@ class _LoginPageState extends State<LoginPage> {
             backgroundColor: Colors.green,
           ),
         );
-        _navegarAlHome(usuario);
+        // Navegamos pasando el rol detectado
+        _navegarAlHome(usuario, rolReal);
       }
     } catch (e) {
       if (mounted) {
@@ -70,27 +78,24 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _navegarAlHome(Map<String, dynamic> usuario) {
+  void _navegarAlHome(Map<String, dynamic> usuario, String rol) {
     final rawName = usuario['nombre'] ?? 'Usuario';
     final displayName = rawName.toString().split(' ')[0];
     final int userId = usuario['id'];
 
-    if (userType == "Alumno") {
+    // Lógica de redirección automática
+    if (rol == "profesor" || rol == "maestro") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainLayoutMaestros()),
+      );
+    } else {
+      // Por defecto va a Alumno
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) =>
               MainLayout(username: displayName, usuarioId: userId),
-        ),
-      );
-    } else {
-      // Maestro
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          // 🚨 CORRECCIÓN: MainLayoutMaestros no recibía parámetros antes.
-          // Ahora usamos el constructor por defecto, ya que él lee de SharedPreferences en su initState.
-          builder: (context) => const MainLayoutMaestros(),
         ),
       );
     }
@@ -118,6 +123,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
             child: Column(
               children: [
+                // LOGOTIPO (o Ícono por defecto)
                 Image.asset(
                   'lib/image/logotipo.png',
                   height: 250,
@@ -135,6 +141,8 @@ class _LoginPageState extends State<LoginPage> {
                   style: TextStyle(fontSize: 18, color: Colors.grey),
                 ),
                 const SizedBox(height: 20),
+
+                // CAMPO CORREO
                 TextField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -147,6 +155,8 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 15),
+
+                // CAMPO CONTRASEÑA
                 TextField(
                   controller: passwordController,
                   obscureText: _obscurePassword,
@@ -171,27 +181,11 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 15),
-                DropdownButtonFormField<String>(
-                  value: userType,
-                  items: const [
-                    DropdownMenuItem(value: "Alumno", child: Text("Alumno")),
-                    DropdownMenuItem(value: "Maestro", child: Text("Maestro")),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      userType = value.toString();
-                    });
-                  },
-                  decoration: InputDecoration(
-                    labelText: "Soy...",
-                    prefixIcon: const Icon(Icons.person_pin_circle_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                ),
+
+                // YA NO HAY DROPDOWN DE ROL AQUÍ 🎉
                 const SizedBox(height: 20),
+
+                // BOTÓN INGRESAR
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -220,6 +214,8 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
+
+                // IR A REGISTRO
                 TextButton(
                   onPressed: () {
                     Navigator.push(

@@ -60,28 +60,36 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      // 4. Registro en DB
+      // 4. Registro en DB (AQUÍ SÍ ENVIAMOS EL userType)
       await ApiService.registerUser(
         nameController.text.trim(),
         emailController.text.trim(),
         passwordController.text.trim(),
-        userType,
+        userType, // <--- Correcto: El registro necesita saber qué rol crear
       );
 
-      // 5. Auto-Login
+      // 5. Auto-Login (CORREGIDO: YA NO ENVIAMOS userType)
+      // La API ahora detecta el rol automáticamente
       final usuario = await ApiService.loginUser(
         emailController.text.trim(),
         passwordController.text.trim(),
-        userType,
+        // userType, <--- ELIMINADO: Esto causaba el error
       );
 
       // 6. Guardar sesión
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('saved_username', emailController.text.trim());
       await prefs.setString('saved_password', passwordController.text.trim());
+
+      // Guardamos el rol que elegimos en el registro o el que devolvió el login
+      // (Usamos el del registro para asegurar consistencia inmediata)
       await prefs.setString('saved_userType', userType);
+
       await prefs.setString('saved_name', usuario['nombre']);
-      await prefs.setInt('saved_id', usuario['id']);
+
+      // Aseguramos que el ID sea int
+      final int userId = int.tryParse(usuario['id'].toString()) ?? 0;
+      await prefs.setInt('saved_id', userId);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -90,7 +98,8 @@ class _RegisterPageState extends State<RegisterPage> {
             backgroundColor: Colors.green,
           ),
         );
-        _navegarAlHome();
+        // Navegar
+        _navegarAlHome(userId);
       }
     } catch (e) {
       if (mounted) {
@@ -114,21 +123,9 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  void _navegarAlHome() async {
+  void _navegarAlHome(int userId) {
     final raw = nameController.text.trim();
     final displayName = raw.isNotEmpty ? raw.split(' ')[0] : 'Usuario';
-
-    final prefs = await SharedPreferences.getInstance();
-    final int? savedId = prefs.getInt('saved_id');
-
-    if (savedId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Error: no se pudo obtener el ID del usuario"),
-        ),
-      );
-      return;
-    }
 
     if (userType == "Maestro" || userType == "Profesor") {
       Navigator.pushReplacement(
@@ -140,7 +137,7 @@ class _RegisterPageState extends State<RegisterPage> {
         context,
         MaterialPageRoute(
           builder: (context) =>
-              MainLayout(username: displayName, usuarioId: savedId),
+              MainLayout(username: displayName, usuarioId: userId),
         ),
       );
     }
@@ -234,7 +231,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: InputDecoration(
                     labelText: "Contraseña",
                     prefixIcon: const Icon(Icons.lock_outline),
-                    // Botón para mostrar/ocultar
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -262,7 +258,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: InputDecoration(
                     labelText: "Confirmar Contraseña",
                     prefixIcon: const Icon(Icons.lock_reset),
-                    // Botón para mostrar/ocultar
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureConfirmPassword

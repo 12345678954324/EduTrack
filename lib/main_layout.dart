@@ -187,7 +187,7 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   // ------------------------------------------------------------------
-  // ENCABEZADO PERSONALIZADO (REEMPLAZO DE UserAccountsDrawerHeader)
+  // ENCABEZADO PERSONALIZADO
   // ------------------------------------------------------------------
   Widget _buildDrawerHeader() {
     return Container(
@@ -205,7 +205,7 @@ class _MainLayoutState extends State<MainLayout> {
         children: [
           // 1. EL ICONO / AVATAR
           CircleAvatar(
-            radius: 35, // Un poco más grande
+            radius: 35,
             backgroundColor: Colors.white,
             child: Text(
               _nombreDisplay.isNotEmpty ? _nombreDisplay[0].toUpperCase() : 'A',
@@ -217,8 +217,9 @@ class _MainLayoutState extends State<MainLayout> {
             ),
           ),
 
-          // 2. EL ESPACIO EXTRA QUE PEDISTE
-          const SizedBox(height: 25), // <--- Aquí controlas la separación
+          // 2. ESPACIO EXTRA
+          const SizedBox(height: 25),
+
           // 3. EL USUARIO Y TEXTO
           Text(
             _nombreDisplay,
@@ -288,7 +289,11 @@ class _MainLayoutState extends State<MainLayout> {
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        onTap: () => _onSelectItem(index),
+        // CORRECCIÓN AQUÍ: Cierra el Drawer antes de cambiar de pantalla
+        onTap: () {
+          Navigator.of(context).pop(); // Cierra el menú lateral
+          _onSelectItem(index); // Cambia la pantalla
+        },
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );

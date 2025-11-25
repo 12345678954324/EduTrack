@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // IMPORTANTE: Para obtener el ID
 import '../services/api_service.dart';
 
 class SubirCalificacionesScreen extends StatefulWidget {
@@ -12,6 +13,7 @@ class SubirCalificacionesScreen extends StatefulWidget {
 class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
   List<Grupo> _grupos = [];
   int? _selectedGrupoId;
+  int _profesorId = 0; // ID del profesor logueado
 
   bool _loading = false;
   List<Alumno> _alumnos = [];
@@ -26,24 +28,43 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
   @override
   void initState() {
     super.initState();
-    _cargarGruposIniciales();
+    _cargarDatosUsuario(); // Primero cargamos usuario, luego grupos
 
     _searchController.addListener(() {
       setState(() => _searchText = _searchController.text);
     });
   }
 
-  Future<void> _cargarGruposIniciales() async {
+  // 1. Obtener el ID del profesor
+  Future<void> _cargarDatosUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _profesorId = prefs.getInt('saved_id') ?? 0;
+    });
+
+    // Solo cargamos grupos si hay un ID válido
+    if (_profesorId != 0) {
+      _cargarGrupos();
+    }
+  }
+
+  // 2. Cargar grupos filtrados
+  Future<void> _cargarGrupos() async {
     try {
-      final grupos = await ApiService.getGrupos();
-      setState(() => _grupos = grupos);
+      // Enviamos el profesorId para obtener solo SUS grupos
+      final grupos = await ApiService.getGrupos(profesorId: _profesorId);
+      if (mounted) {
+        setState(() => _grupos = grupos);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error cargando grupos: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error cargando grupos: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -113,7 +134,7 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
         SnackBar(
           content: Text("Calificación de ${alumno.nombre} guardada."),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 1),
+          duration: const Duration(seconds: 1),
         ),
       );
     } catch (e) {
@@ -143,24 +164,27 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
     final String? calif = _calificaciones[alumno.id];
 
     return AnimatedContainer(
-      duration: Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 200),
       curve: Curves.easeOut,
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.white, Color(0xFFE8D9FF).withOpacity(0.4)],
+          colors: [Colors.white, const Color(0xFFE8D9FF).withOpacity(0.4)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 3)),
         ],
       ),
       child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
 
-        leading: CircleAvatar(
+        leading: const CircleAvatar(
           radius: 26,
           backgroundColor: Color(0xFFB388EB),
           child: Icon(Icons.person, size: 30, color: Color(0xFF4B0082)),
@@ -168,7 +192,7 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
 
         title: Text(
           alumno.nombre,
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
         ),
 
         subtitle: Text(alumno.correo),
@@ -179,24 +203,24 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
                 children: [
                   Container(
                     width: 60,
-                    padding: EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Color(0xFFB388EB)),
+                      border: Border.all(color: const Color(0xFFB388EB)),
                     ),
                     child: TextField(
                       controller: _controllers[alumno.id],
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         border: InputBorder.none,
                         hintText: '0',
                       ),
                     ),
                   ),
                   IconButton(
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.check_circle,
                       color: Colors.green,
                       size: 28,
@@ -214,14 +238,17 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: EdgeInsets.symmetric(vertical: 6, horizontal: 14),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 6,
+                      horizontal: 14,
+                    ),
                     decoration: BoxDecoration(
-                      color: Color(0xFFE8D9FF),
+                      color: const Color(0xFFE8D9FF),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       calif == null || calif.isEmpty ? "—" : calif.toString(),
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF4B0082),
@@ -229,13 +256,17 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.edit, color: Color(0xFF6A0DAD), size: 26),
+                    icon: const Icon(
+                      Icons.edit,
+                      color: Color(0xFF6A0DAD),
+                      size: 26,
+                    ),
                     onPressed: () {
                       setState(() => _isEditing[alumno.id] = true);
                     },
                   ),
                   IconButton(
-                    icon: Icon(Icons.delete, color: Colors.red, size: 26),
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 26),
                     onPressed: () {
                       setState(() {
                         _controllers[alumno.id]?.text = '';
@@ -253,16 +284,16 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade200,
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // SELECTOR DE GRUPO
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 6,
@@ -270,11 +301,11 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
                   ),
                 ],
               ),
-              padding: EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
               child: DropdownButtonFormField<int>(
                 value: _selectedGrupoId,
-                decoration: InputDecoration(border: InputBorder.none),
-                hint: Text("Selecciona un grupo"),
+                decoration: const InputDecoration(border: InputBorder.none),
+                hint: const Text("Selecciona un grupo"),
                 items: _grupos.map((g) {
                   return DropdownMenuItem(
                     value: g.id,
@@ -290,13 +321,14 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
               ),
             ),
 
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
 
+            // BARRA DE BÚSQUEDA
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 6,
@@ -306,7 +338,7 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
               ),
               child: TextField(
                 controller: _searchController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.search, color: Color(0xFF6A0DAD)),
                   hintText: "Buscar alumno...",
                   border: InputBorder.none,
@@ -315,16 +347,22 @@ class _SubirCalificacionesScreenState extends State<SubirCalificacionesScreen> {
               ),
             ),
 
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
 
+            // LISTA DE ALUMNOS
             Expanded(
               child: _loading
-                  ? Center(child: CircularProgressIndicator())
+                  ? const Center(child: CircularProgressIndicator())
                   : _filteredAlumnos.isEmpty
                   ? Center(
                       child: Text(
-                        "No hay alumnos",
-                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                        _selectedGrupoId == null
+                            ? "Selecciona un grupo primero"
+                            : "No hay alumnos en este grupo",
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
                       ),
                     )
                   : ListView.builder(

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import '../pantallas/materia_models.dart';
 import '../services/api_service.dart';
-import 'detalles_materia_screen.dart';
-import 'student_dashboard_screen.dart';
-import 'package:app_calificaciones/main_layout.dart';
-import '/main_soporte.dart';
+import 'materia_models.dart'; // Asegúrate de que este archivo existe en la misma carpeta o ajusta la ruta
+// Si está en la misma carpeta: import 'materia_models.dart';
+// Si está en lib: import '../materia_models.dart';
 
 class HistorialAcademicoScreen extends StatefulWidget {
   final int alumnoId;
-  final Function(int) onNavigate; // ← callback para cambiar pestaña
+  final Function(int)
+  onNavigate; // Callback para cambiar de pestaña en MainLayout
 
   const HistorialAcademicoScreen({
     super.key,
@@ -45,16 +44,21 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
     try {
       final data = await ApiService.getHistorialAcademico(widget.alumnoId);
 
-      setState(() {
-        historial = data;
-        semestreSeleccionado = data.keys.isNotEmpty ? data.keys.first : null;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          historial = data;
+          // Seleccionamos el primer semestre disponible por defecto
+          semestreSeleccionado = data.keys.isNotEmpty ? data.keys.first : null;
+          loading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        loading = false;
-        error = "Error al cargar el historial académico.";
-      });
+      if (mounted) {
+        setState(() {
+          loading = false;
+          error = "No se pudo conectar con el servidor.\n\nDetalles: $e";
+        });
+      }
     }
   }
 
@@ -74,21 +78,67 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.deepPurple),
+        ),
+      );
     }
 
     if (error != null) {
-      return Scaffold(body: Center(child: Text(error!)));
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.wifi_off_rounded,
+                  size: 50,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: _cargarHistorial,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text("Reintentar"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
-    if (semestreSeleccionado == null) {
+    if (semestreSeleccionado == null || historial.isEmpty) {
       return const Scaffold(
-        body: Center(child: Text("No hay materias registradas.")),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.history_edu, size: 50, color: Colors.grey),
+              SizedBox(height: 10),
+              Text("No hay materias registradas en el historial."),
+            ],
+          ),
+        ),
       );
     }
 
     final materias = historial[semestreSeleccionado]!;
 
+    // Calcular promedio del semestre seleccionado
     double promedio = materias.isNotEmpty
         ? materias.fold(0.0, (sum, m) => sum + m.calificacionFinal) /
               materias.length
@@ -97,21 +147,38 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
     return Scaffold(
       body: Column(
         children: [
+          // Selector de Semestres (Chips)
           _buildSemestreSelector(),
 
-          Padding(
+          // Resumen de Promedio
+          Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(16.0),
-            child: Text(
-              "Promedio de $semestreSeleccionado: ${promedio.toStringAsFixed(2)}",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            color: Colors.grey[50],
+            child: Column(
+              children: [
+                Text(
+                  "Promedio del Semestre",
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+                Text(
+                  promedio.toStringAsFixed(1),
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: _getCalificacionColor(promedio, "Finalizado"),
+                  ),
+                ),
+              ],
             ),
           ),
 
           const Divider(height: 1),
 
+          // Lista de Materias
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               itemCount: materias.length,
               itemBuilder: (context, i) {
                 return _buildMateriaCard(materias[i]);
@@ -120,17 +187,16 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
           ),
         ],
       ),
-      // 🚨 BOTÓN FLOTANTE (NAVEGACIÓN)
+
+      // Botón Flotante para Soporte
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // ⚠️ CORRECCIÓN: Quitar 'const' si Solucion1Soporte es StatefulWidget
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => EdutrackSupportApp()),
-          );
+          // Navegar a la pestaña de Ayuda (Índice 3 en MainLayout)
+          widget.onNavigate(3);
         },
         backgroundColor: Colors.orange,
-        child: const Icon(Icons.message, color: Colors.white),
+        child: const Icon(Icons.support_agent, color: Colors.white),
+        tooltip: 'Contactar Soporte',
       ),
     );
   }
@@ -141,25 +207,28 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
   Widget _buildSemestreSelector() {
     return Container(
       height: 60,
-      color: Colors.teal.shade50,
+      color: Colors.white,
       child: ListView(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         children: historial.keys.map((semestre) {
           bool selected = semestre == semestreSeleccionado;
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
             child: ChoiceChip(
               label: Text(semestre),
               selected: selected,
-              selectedColor: Colors.teal,
+              selectedColor: Colors.deepPurple.shade100,
               backgroundColor: Colors.white,
               labelStyle: TextStyle(
-                color: selected ? Colors.white : Colors.teal.shade700,
+                color: selected ? Colors.deepPurple : Colors.grey[700],
                 fontWeight: FontWeight.bold,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: Colors.teal),
+                side: BorderSide(
+                  color: selected ? Colors.deepPurple : Colors.grey.shade300,
+                ),
               ),
               onSelected: (_) {
                 setState(() {
@@ -178,37 +247,63 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
   // ---------------------------------------------------------------------------
   Widget _buildMateriaCard(Materia materia) {
     double nota = materia.calificacionFinal;
-    String estatus = materia.estatus;
+    String estatus = materia.estatus ?? "Finalizado"; // Asegurar valor
     Color color = _getCalificacionColor(nota, estatus);
 
     return Card(
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.1),
+          child: Icon(Icons.book, color: color),
+        ),
         title: Text(
           materia.nombre,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        subtitle: Text("Profesor: ${materia.profesor}\nEstatus: $estatus"),
-        trailing: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(8),
-          ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
           child: Text(
-            estatus == "En Curso" ? "En Curso" : nota.toStringAsFixed(1),
-            style: const TextStyle(color: Colors.white),
+            "Prof: ${materia.profesor}",
+            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
           ),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              estatus == "En Curso" ? "Cursando" : nota.toStringAsFixed(1),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            if (estatus != "En Curso")
+              Text(
+                nota >= 7.0 ? "Aprobada" : "Reprobada",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: nota >= 7.0 ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+          ],
         ),
         onTap: () {
+          // Aquí podrías navegar a detalles si tienes esa pantalla
+          /*
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => DetallesMateriaScreen(materia: materia),
             ),
           );
+          */
         },
       ),
     );

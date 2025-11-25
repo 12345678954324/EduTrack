@@ -110,26 +110,6 @@ class _Solution5SoporteState extends State<Solution5Soporte> {
             const SizedBox(height: 12),
 
             // Botón Volver a Inicio
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () =>
-                    Navigator.of(context).popUntil((route) => route.isFirst),
-                icon: const Icon(Icons.home),
-                label: const Text('Volver a inicio'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple.shade50,
-                  foregroundColor: Colors.deepPurple,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: const BorderSide(color: Colors.deepPurple),
-                  ),
-                ),
-              ),
-            ),
-
             const SizedBox(height: 20),
             const Text('1. Verifica el tamaño del archivo (máximo 10MB)'),
             const Text(

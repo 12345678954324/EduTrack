@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart'; // Importamos el servicio y los modelos
 
 class NotificationsPage extends StatefulWidget {
-  // El ID del usuario actual
   final int usuarioId;
 
-  // Puedes cambiar el valor por defecto o pasarlo desde el Login
-  const NotificationsPage({super.key, this.usuarioId = 3});
+  const NotificationsPage({super.key, required this.usuarioId});
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -25,13 +23,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Future<void> _cargarNotificaciones() async {
     try {
       final lista = await ApiService.getNotificaciones(widget.usuarioId);
-      setState(() {
-        _notificaciones = lista;
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _notificaciones = lista;
+          _loading = false;
+        });
+      }
     } catch (e) {
       print("Error cargando notificaciones: $e");
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -44,15 +44,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.deepPurple,
-        foregroundColor:
-            Colors.white, // Esto hace que el texto y los iconos sean blancos
-        // FLECHA DE REGRESO EXPLÍCITA
+        foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            // Esto regresa a la pantalla anterior (MainLayout o MainLayoutMaestros)
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Container(
@@ -90,7 +85,25 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Widget _notificationCard(Notificacion notif) {
-    // Cortamos la fecha para que no se vea tan larga
+    // Lógica para detectar alertas (Reprobado, Baja, Advertencia)
+    final bool esAlerta =
+        notif.titulo.contains("Alerta") ||
+        notif.titulo.contains("Baja") ||
+        notif.mensaje.contains("reprobatoria");
+
+    // Colores dinámicos
+    final Color backgroundColor = esAlerta
+        ? Colors.red.shade50.withOpacity(0.9)
+        : (notif.leida
+              ? Colors.white.withOpacity(0.7)
+              : Colors.white.withOpacity(0.95));
+
+    final Color iconColor = esAlerta ? Colors.red : Colors.deepPurple;
+    final IconData iconData = esAlerta
+        ? Icons.warning_rounded
+        : Icons.notifications;
+
+    // Formato de fecha
     String fechaCorta = notif.fecha.length > 10
         ? notif.fecha.substring(0, 10)
         : notif.fecha;
@@ -99,14 +112,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: notif.leida
-            ? Colors.white.withOpacity(0.7)
-            : Colors.white.withOpacity(0.95),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(18),
-        // Borde morado si no está leída
-        border: !notif.leida
-            ? Border.all(color: Colors.deepPurple, width: 2)
-            : null,
+        border: esAlerta
+            ? Border.all(color: Colors.red, width: 1.5)
+            : (!notif.leida
+                  ? Border.all(color: Colors.deepPurple, width: 2)
+                  : null),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -122,20 +134,29 @@ class _NotificationsPageState extends State<NotificationsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  notif.titulo,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
-                  ),
+                child: Row(
+                  children: [
+                    Icon(iconData, size: 20, color: iconColor),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        notif.titulo,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: esAlerta ? Colors.red[800] : Colors.deepPurple,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (!notif.leida)
+              if (!notif.leida && !esAlerta)
                 const Icon(Icons.circle, size: 12, color: Colors.redAccent),
             ],
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 8),
           Text(
             notif.mensaje,
             style: const TextStyle(fontSize: 15, color: Colors.black87),
