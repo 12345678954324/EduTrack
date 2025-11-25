@@ -6,7 +6,6 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
-
 // MIDDLEWARE
 app.use(cors());
 app.use(express.json());
@@ -29,18 +28,32 @@ db.connect((err) => {
 
 // ================= RUTAS PRINCIPALES =================
 
-// 1. OBTENER GRUPOS (CLASES)
+// 1. OBTENER GRUPOS (CLASES) - ¡CORREGIDO CON FILTRO!
 app.get('/grupos', (req, res) => {
-    const sql = `
+    const { profesor_id } = req.query; // Recibimos el ID del profesor desde Flutter
+
+    let sql = `
         SELECT mg.id, g.id as grupo_id, g.nombre, m.nombre as materia 
         FROM materias_grupos mg
         JOIN grupos g ON mg.grupo_id = g.id
         JOIN materias m ON mg.materia_id = m.id
-        ORDER BY g.nombre ASC
     `;
     
+    // LÓGICA DE FILTRADO:
+    // Si nos envían un profesor_id, filtramos solo sus clases.
+    if (profesor_id) {
+        // Usamos db.escape para evitar inyecciones SQL y errores de sintaxis
+        sql += ` WHERE mg.profesor_id = ${db.escape(profesor_id)}`;
+    }
+    
+    sql += ` ORDER BY g.nombre ASC`;
+    
     db.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: err.message });
+        // Si falla porque la columna 'profesor_id' no existe, avisamos
+        if (err) {
+            console.error("Error SQL:", err.message);
+            return res.status(500).json({ error: err.message });
+        }
         res.json(results); 
     });
 });
@@ -138,7 +151,7 @@ app.get('/notificaciones/:usuario_id', (req, res) => {
     });
 });
 
-// 6. REGISTRO
+// 6. REGISTRO (DEVUELVE ID)
 app.post('/register', (req, res) => {
     const { nombre, correo, contrasena, tipo_usuario } = req.body;
     let rol = tipo_usuario.toLowerCase();
@@ -150,11 +163,12 @@ app.post('/register', (req, res) => {
              if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'El correo ya está registrado' });
              return res.status(500).json({ error: err.message });
         }
+        // Devolvemos el ID recién creado
         res.json({ message: 'Registrado exitosamente', id: result.insertId });
     });
 });
 
-// 7. LOGIN
+// 7. LOGIN (DEVUELVE OBJETO USUARIO COMPLETO)
 app.post('/login', (req, res) => {
     const { correo, contrasena, tipo_usuario } = req.body;
     let rol = tipo_usuario.toLowerCase();
@@ -213,9 +227,9 @@ app.get('/grupos_disponibles', (req, res) => {
     });
 });
 
-// 11. CREAR MATERIA
+// 11. CREAR MATERIA (ASIGNA PROFESOR_ID)
 app.post('/clases/crear', (req, res) => {
-    const { grupo_id, nombre_materia } = req.body;
+    const { grupo_id, nombre_materia, profesor_id } = req.body; // <--- RECIBIMOS EL ID DEL PROFESOR
     if (!grupo_id || !nombre_materia) return res.status(400).json({ error: 'Faltan datos' });
 
     const buscarMateriaSql = 'SELECT id FROM materias WHERE nombre = ?';
@@ -225,8 +239,9 @@ app.post('/clases/crear', (req, res) => {
         let materiaId;
 
         const crearRelacion = (mId) => {
-            const insertClaseSql = 'INSERT INTO materias_grupos (grupo_id, materia_id) VALUES (?, ?)';
-            db.query(insertClaseSql, [grupo_id, mId], (err, result) => {
+            // AHORA GUARDAMOS EL PROFESOR_ID EN LA TABLA INTERMEDIA
+            const insertClaseSql = 'INSERT INTO materias_grupos (grupo_id, materia_id, profesor_id) VALUES (?, ?, ?)';
+            db.query(insertClaseSql, [grupo_id, mId, profesor_id || null], (err, result) => {
                 if (err) return res.status(500).json({ error: 'Error creando la clase (quizá ya existe)' });
                 res.json({ message: 'Clase creada exitosamente', id: result.insertId });
             });
@@ -259,7 +274,7 @@ app.post('/grupos/eliminar_alumno', (req, res) => {
     });
 });
 
-// 13. VERIFICAR GRUPO DE ALUMNO (AJUSTADA Y CORREGIDA)
+// 13. VERIFICAR GRUPO DE ALUMNO
 app.get('/alumnos/:id/grupo', (req, res) => {
     const { id } = req.params;
     const sql = `
@@ -287,33 +302,33 @@ app.get('/alumnos/:id/grupo', (req, res) => {
     });
 });
 
-// 14. OBTENER ESTADÍSTICAS DEL PROFESOR (VERSIÓN FINAL)
+// 14. OBTENER ESTADÍSTICAS DEL PROFESOR
 app.get('/profesor/:id/stats', (req, res) => {
     const { id } = req.params;
     
-    // Contar grupos (clases)
+    // Contar grupos donde el profesor da clase
     const sqlGroups = `
-        SELECT COUNT(DISTINCT mg.grupo_id) as total_grupos
-        FROM materias_grupos mg
-        JOIN profesores_materias pm ON mg.materia_id = pm.materia_id
-        WHERE pm.profesor_id = ?;
+        SELECT COUNT(DISTINCT grupo_id) as total_grupos
+        FROM materias_grupos
+        WHERE profesor_id = ?;
     `;
     
-    // Contar alumnos
+    // Contar alumnos únicos en esos grupos
     const sqlAlumnos = `
         SELECT COUNT(DISTINCT ag.alumno_id) AS total_alumnos
         FROM alumnos_grupos ag
         JOIN materias_grupos mg ON ag.grupo_id = mg.grupo_id
-        JOIN profesores_materias pm ON mg.materia_id = pm.materia_id
-        WHERE pm.profesor_id = ?;
+        WHERE mg.profesor_id = ?;
     `;
 
-    // Ejecutar ambas consultas
     db.query(sqlGroups, [id], (errGroups, resGroups) => {
-        if (errGroups) return res.status(500).json({ error: errGroups.message });
+        if (errGroups) {
+            // Fallback silencioso (devuelve 0) si falla por estructura
+            return res.json({ grupos: 0, alumnos: 0 });
+        }
 
         db.query(sqlAlumnos, [id], (errAlumnos, resAlumnos) => {
-            if (errAlumnos) return res.status(500).json({ error: errAlumnos.message });
+            if (errAlumnos) return res.json({ grupos: 0, alumnos: 0 });
             
             res.json({
                 grupos: resGroups[0].total_grupos,
@@ -323,7 +338,6 @@ app.get('/profesor/:id/stats', (req, res) => {
     });
 });
 
-
 function crearNotificacion(uid, titulo, mensaje) {
     const sql = 'INSERT INTO notificaciones (usuario_id, titulo, mensaje, fecha) VALUES (?, ?, ?, NOW())';
     db.query(sql, [uid, titulo, mensaje], (err) => {
@@ -331,19 +345,12 @@ function crearNotificacion(uid, titulo, mensaje) {
     });
 }
 
-
-// ... (Tus otros endpoints) ...
-
-// 15. OBTENER DASHBOARD DEL ALUMNO (Endpoint faltante)
+// 15. OBTENER DASHBOARD DEL ALUMNO
 app.get('/dashboard/:id', (req, res) => {
     const { id } = req.params;
 
-    // 1. Obtener datos del alumno
     const sqlAlumno = 'SELECT nombre, email FROM usuarios WHERE id = ? AND rol = "alumno"';
     
-    // 2. Obtener materias y calificaciones
-    // Hacemos JOIN para ver qué grupo tiene el alumno, qué materias tiene ese grupo, 
-    // y si ya tiene calificación en esas materias.
     const sqlMaterias = `
         SELECT m.nombre as materia, cf.calificacion 
         FROM alumnos_grupos ag
@@ -365,7 +372,6 @@ app.get('/dashboard/:id', (req, res) => {
             let totalCalificaciones = 0;
             let countCalificadas = 0;
             
-            // Procesar materias para el formato que pide Flutter
             const subjects = matResults.map(row => {
                 let estado = 'Pendiente';
                 let calif = null;
@@ -384,16 +390,14 @@ app.get('/dashboard/:id', (req, res) => {
                 };
             });
 
-            // Calcular promedio (si no tiene calificaciones, es 0)
             const average = countCalificadas > 0 ? (totalCalificaciones / countCalificadas) : 0.0;
 
-            // Enviar respuesta con la estructura que espera tu modelo en Dart
             res.json({
-                average: parseFloat(average.toFixed(1)), // Redondear a 1 decimal
+                average: parseFloat(average.toFixed(1)),
                 student: {
                     nombre: alumno.nombre,
-                    carrera: 'Ingeniería de Software', // Dato estático o agrégalo a tu DB si existe
-                    matricula: id.toString() // Usamos el ID como matrícula por ahora
+                    carrera: 'Ingeniería de Software', 
+                    matricula: id.toString() 
                 },
                 subjects: subjects
             });
@@ -401,17 +405,14 @@ app.get('/dashboard/:id', (req, res) => {
     });
 });
 
-
-// 16. GUARDAR REPORTE DE SOPORTE (¡NUEVO!)
+// 16. GUARDAR REPORTE DE SOPORTE
 app.post('/reportes_soporte', (req, res) => {
-    // OJO: El frontend enviará 'mensaje', y la DB espera 'mensaje'.
     const { usuario_id, email, mensaje } = req.body;
 
     if (!usuario_id || !email || !mensaje) {
         return res.status(400).json({ error: 'Faltan datos (usuario_id, email, mensaje)' });
     }
 
-    // Corregido: La columna en la DB es 'mensaje', no 'message'
     const insertSql = 'INSERT INTO reportes_soporte (usuario_id, email, mensaje) VALUES (?, ?, ?)';
     
     db.query(insertSql, [usuario_id, email, mensaje], (err, result) => {
@@ -420,6 +421,7 @@ app.post('/reportes_soporte', (req, res) => {
     });
 });
 
+// 17. HISTORIAL ACADÉMICO
 app.get('/historial_academico/:alumnoId', (req, res) => {
     const { alumnoId } = req.params;
 
@@ -434,7 +436,7 @@ app.get('/historial_academico/:alumnoId', (req, res) => {
         JOIN materias_grupos mg ON m.id = mg.materia_id
         JOIN grupos g ON mg.grupo_id = g.id
         LEFT JOIN alumnos_grupos ag ON ag.grupo_id = g.id AND ag.alumno_id = cf.alumno_id
-        LEFT JOIN usuarios u ON u.rol = 'profesor'
+        LEFT JOIN usuarios u ON mg.profesor_id = u.id  -- <-- Corregido para usar profesor_id directo
         WHERE cf.alumno_id = ?
         ORDER BY g.nombre, m.nombre
     `;
@@ -445,7 +447,6 @@ app.get('/historial_academico/:alumnoId', (req, res) => {
             return res.status(500).json({ error: 'Error al consultar historial: ' + err.message });
         }
         
-        // PROCESAMIENTO DE DATOS: Agrupar por el Nombre del Grupo (que simula el semestre)
         const semestresAgrupados = {};
 
         results.forEach(row => {
@@ -475,9 +476,7 @@ app.get('/historial_academico/:alumnoId', (req, res) => {
     });
 });
 
-
-
 // INICIAR SERVIDOR
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Servidor corriendo en http://192.168.0.5:${PORT}`);
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });

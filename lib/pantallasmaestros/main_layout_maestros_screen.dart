@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // IMPORTS DE UTILIDADES
-import '../pantallas/notificaciones.dart'; // Asegúrate que este sea NotificationsPage
+import '../pantallas/notificaciones.dart';
 import '../pantallas/ayuda_screen.dart';
 import '../login_page.dart';
 
@@ -24,7 +24,7 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
   // Variables para datos del perfil
   String _nombreDisplay = 'Cargando...';
   String _correoDisplay = '';
-  int _usuarioId = 0; // 👈 NECESARIO: Almacenar el ID del profesor
+  int _usuarioId = 0;
 
   @override
   void initState() {
@@ -36,7 +36,6 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
   Future<void> _cargarDatosUsuario() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // Leemos el ID, el nombre y el correo que se guardaron en el Login
     final id = prefs.getInt('saved_id') ?? 0;
 
     if (mounted) {
@@ -80,12 +79,10 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
         elevation: 4.0,
-        // --- AQUÍ ESTÁ LA CAMPANA DE NOTIFICACIONES ---
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              // Pasa el ID del profesor para que cargue sus recordatorios
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -102,8 +99,8 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
           color: Colors.white,
           child: Column(
             children: [
-              // --- ENCABEZADO DINÁMICO ---
-              _buildDrawerHeader(),
+              // --- ENCABEZADO PERSONALIZADO CON MÁS ESPACIO ---
+              _buildCustomDrawerHeader(),
 
               // --- LISTA DE OPCIONES ---
               Expanded(
@@ -158,6 +155,9 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   onTap: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.clear(); // Borrar sesión
+
                     if (context.mounted) {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
@@ -176,51 +176,77 @@ class _MainLayoutMaestrosState extends State<MainLayoutMaestros> {
     );
   }
 
-  Widget _buildDrawerHeader() {
-    return UserAccountsDrawerHeader(
-      accountName: Text(
-        _nombreDisplay,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
-      accountEmail: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(_correoDisplay, style: const TextStyle(fontSize: 14)),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Text(
-              'DOCENTE',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-      currentAccountPicture: CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Text(
-          _nombreDisplay.isNotEmpty ? _nombreDisplay[0].toUpperCase() : 'P',
-          style: TextStyle(
-            fontSize: 28,
-            color: Colors.deepPurple.shade700,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+  // -----------------------------------------------------------
+  // HEADER PERSONALIZADO (REEMPLAZO DE UserAccountsDrawerHeader)
+  // -----------------------------------------------------------
+  Widget _buildCustomDrawerHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(top: 50, bottom: 20, left: 20, right: 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade400],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. AVATAR (MÁS GRANDE)
+          CircleAvatar(
+            radius: 35,
+            backgroundColor: Colors.white,
+            child: Text(
+              _nombreDisplay.isNotEmpty ? _nombreDisplay[0].toUpperCase() : 'P',
+              style: TextStyle(
+                fontSize: 30,
+                color: Colors.deepPurple.shade700,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          // 2. ESPACIO EXTRA (Aquí ajustamos la separación)
+          const SizedBox(height: 25),
+
+          // 3. NOMBRE
+          Text(
+            _nombreDisplay,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+
+          const SizedBox(height: 5),
+
+          // 4. CORREO
+          Text(
+            _correoDisplay,
+            style: const TextStyle(fontSize: 14, color: Colors.white70),
+          ),
+
+          const SizedBox(height: 12),
+
+          // 5. ETIQUETA DE ROL
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Text(
+              'DOCENTE',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

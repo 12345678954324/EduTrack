@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class MisGruposScreen extends StatefulWidget {
@@ -11,30 +12,58 @@ class MisGruposScreen extends StatefulWidget {
 class _MisGruposScreenState extends State<MisGruposScreen> {
   List<Grupo> _grupos = [];
   bool _loading = true;
+  int _profesorId = 0; // ID del profesor logueado
 
   @override
   void initState() {
     super.initState();
-    _cargarGrupos();
+    _cargarDatosUsuario();
   }
 
+  // 1. Obtener el ID del profesor desde la sesión guardada
+  Future<void> _cargarDatosUsuario() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _profesorId = prefs.getInt('saved_id') ?? 0;
+    });
+
+    // Solo cargamos si tenemos un ID válido
+    if (_profesorId != 0) {
+      _cargarGrupos();
+    } else {
+      setState(() => _loading = false);
+    }
+  }
+
+  // 2. Cargar grupos filtrados por el Profesor ID
   Future<void> _cargarGrupos() async {
     try {
-      final grupos = await ApiService.getGrupos();
-      if (mounted)
+      // Enviamos el ID para que el servidor nos devuelva SOLO mis materias
+      final grupos = await ApiService.getGrupos(profesorId: _profesorId);
+
+      if (mounted) {
         setState(() {
           _grupos = grupos;
           _loading = false;
         });
+      }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   void _abrirDialogoCrear() {
+    if (_profesorId == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error: No se identificó al profesor")),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
-      builder: (context) => const DialogCrearClase(),
+      builder: (context) =>
+          DialogCrearClase(profesorId: _profesorId), // Pasamos el ID
     ).then((_) => _cargarGrupos());
   }
 
@@ -51,7 +80,19 @@ class _MisGruposScreenState extends State<MisGruposScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _grupos.isEmpty
-          ? const Center(child: Text("No tienes grupos asignados"))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.class_outlined, size: 60, color: Colors.grey),
+                  SizedBox(height: 10),
+                  Text(
+                    "No tienes materias asignadas",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _grupos.length,
@@ -98,6 +139,9 @@ class _MisGruposScreenState extends State<MisGruposScreen> {
   }
 }
 
+// ========================================================
+// PANTALLA DE DETALLE (VER ALUMNOS)
+// ========================================================
 class DetalleGrupoScreen extends StatefulWidget {
   final Grupo grupo;
   const DetalleGrupoScreen({super.key, required this.grupo});
@@ -241,9 +285,14 @@ class _DetalleGrupoScreenState extends State<DetalleGrupoScreen> {
   }
 }
 
-// Diálogo Crear Clase
+// ========================================================
+// DIÁLOGO CREAR CLASE (CORREGIDO)
+// ========================================================
 class DialogCrearClase extends StatefulWidget {
-  const DialogCrearClase({super.key});
+  final int profesorId;
+
+  const DialogCrearClase({super.key, required this.profesorId});
+
   @override
   State<DialogCrearClase> createState() => _DialogCrearClaseState();
 }
@@ -270,16 +319,20 @@ class _DialogCrearClaseState extends State<DialogCrearClase> {
   void _crear() async {
     if (_selectedGrupoId == null || _materiaController.text.isEmpty) return;
     setState(() => _loadingAction = true);
+
     try {
+      // ¡AQUI ESTABA EL ERROR! Ahora enviamos el profesorId correctamente
       await ApiService.crearClase(
         _selectedGrupoId!,
         _materiaController.text.trim(),
+        profesorId: widget.profesorId, // <--- LÍNEA DESCOMENTADA Y CORREGIDA
       );
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Clase creada'),
+            content: Text('Clase creada y asignada a ti correctamente'),
             backgroundColor: Colors.green,
           ),
         );
@@ -287,8 +340,9 @@ class _DialogCrearClaseState extends State<DialogCrearClase> {
     } catch (e) {
       if (mounted) {
         setState(() => _loadingAction = false);
+        // Muestra el error completo para saber qué pasa
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -303,7 +357,7 @@ class _DialogCrearClaseState extends State<DialogCrearClase> {
         children: [
           DropdownButtonFormField<int>(
             value: _selectedGrupoId,
-            hint: const Text("Grupo"),
+            hint: const Text("Selecciona el Grupo"),
             items: _gruposDisponibles
                 .map(
                   (g) => DropdownMenuItem(value: g.id, child: Text(g.nombre)),
@@ -311,9 +365,14 @@ class _DialogCrearClaseState extends State<DialogCrearClase> {
                 .toList(),
             onChanged: (val) => setState(() => _selectedGrupoId = val),
           ),
+          const SizedBox(height: 15),
           TextField(
             controller: _materiaController,
-            decoration: const InputDecoration(labelText: "Materia"),
+            decoration: const InputDecoration(
+              labelText: "Nombre de la Materia",
+              hintText: "Ej. Matemáticas I",
+              border: OutlineInputBorder(),
+            ),
           ),
         ],
       ),
@@ -324,14 +383,20 @@ class _DialogCrearClaseState extends State<DialogCrearClase> {
         ),
         ElevatedButton(
           onPressed: _loadingAction ? null : _crear,
-          child: const Text("Crear"),
+          child: _loadingAction
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text("Crear Clase"),
         ),
       ],
     );
   }
 }
 
-// Diálogo Agregar Alumno con Verificación
+// Diálogo Agregar Alumno (Sin cambios, se mantiene igual)
 class DialogAgregarAlumno extends StatefulWidget {
   final Grupo grupo;
   final VoidCallback onAlumnoAgregado;
@@ -363,11 +428,9 @@ class _DialogAgregarAlumnoState extends State<DialogAgregarAlumno> {
 
   void _agregar(Alumno alumno) async {
     try {
-      // 1. Verificar si ya tiene grupo
       final estado = await ApiService.verificarGrupoAlumno(alumno.id);
 
       if (estado['enrolled'] == true) {
-        // 2. Si tiene grupo, preguntar
         if (!mounted) return;
 
         if (estado['group_id'] == widget.grupo.grupoIdReal) {
@@ -405,7 +468,6 @@ class _DialogAgregarAlumnoState extends State<DialogAgregarAlumno> {
         if (!confirmar) return;
       }
 
-      // 3. Agregar (o Mover)
       await ApiService.agregarAlumnoAGrupo(alumno.id, widget.grupo.grupoIdReal);
 
       if (mounted) {
@@ -441,6 +503,7 @@ class _DialogAgregarAlumnoState extends State<DialogAgregarAlumno> {
             TextField(
               controller: _searchController,
               decoration: InputDecoration(
+                hintText: "Buscar por nombre o correo...",
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search),
                   onPressed: _buscar,

@@ -1,18 +1,40 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '/pantallas/materia_models.dart'; // <-- IMPORTA TU MODELO DE MATERIAS Y EVALUACIONES
+import 'dart:io' show Platform; // Necesario para detectar si es Android/iOS
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // Necesario para detectar Web
+import '/pantallas/materia_models.dart'; // Puedes descomentar si usas un archivo externo, pero aquí incluyo los modelos al final para que sea un solo archivo funcional.
 
 // ==========================================
 // SERVICIO API
 // ==========================================
 class ApiService {
-  static const String baseUrl = 'http://localhost:3000';
+  // ---------------------------------------------------------
+  // CONFIGURACIÓN DE IP AUTOMÁTICA
+  // ---------------------------------------------------------
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3000'; // Web
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3000'; // Emulador Android
+      // NOTA: Si usas celular físico, cambia esto por tu IP local: 'http://192.168.1.50:3000'
+    } else {
+      return 'http://localhost:3000'; // iOS / Desktop
+    }
+  }
 
   // ---------------------------------------------------------
-  // 1. OBTENER GRUPOS (MATERIAS ASIGNADAS)
+  // 1. OBTENER GRUPOS (FILTRADO POR PROFESOR)
   // ---------------------------------------------------------
-  static Future<List<Grupo>> getGrupos() async {
-    final response = await http.get(Uri.parse('$baseUrl/grupos'));
+  static Future<List<Grupo>> getGrupos({int? profesorId}) async {
+    // Construimos la URL. Si hay profesorId, lo enviamos como parámetro query.
+    String url = '$baseUrl/grupos';
+    if (profesorId != null) {
+      url += '?profesor_id=$profesorId';
+    }
+
+    final response = await http.get(Uri.parse(url));
+
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
       return data
@@ -101,9 +123,9 @@ class ApiService {
   }
 
   // ---------------------------------------------------------
-  // 6. REGISTRAR USUARIO
+  // 6. REGISTRAR USUARIO (RETORNA ID)
   // ---------------------------------------------------------
-  static Future<void> registerUser(
+  static Future<int> registerUser(
     String nombre,
     String correo,
     String contrasena,
@@ -120,7 +142,11 @@ class ApiService {
       }),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode == 200) {
+      final body = json.decode(response.body);
+      // Retornamos el ID del nuevo usuario
+      return body['id'];
+    } else {
       final body = json.decode(response.body);
       throw Exception(body['error'] ?? 'Error al registrar usuario');
     }
@@ -202,13 +228,21 @@ class ApiService {
   }
 
   // ---------------------------------------------------------
-  // 11. CREAR CLASE (MATERIA)
+  // 11. CREAR CLASE (MATERIA) - VINCULA AL PROFESOR
   // ---------------------------------------------------------
-  static Future<void> crearClase(int grupoId, String nombreMateria) async {
+  static Future<void> crearClase(
+    int grupoId,
+    String nombreMateria, {
+    int? profesorId, // <--- Parámetro opcional para asignar al profesor
+  }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/clases/crear'),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({'grupo_id': grupoId, 'nombre_materia': nombreMateria}),
+      body: json.encode({
+        'grupo_id': grupoId,
+        'nombre_materia': nombreMateria,
+        'profesor_id': profesorId, // Enviamos el ID si existe
+      }),
     );
 
     if (response.statusCode != 200) {
@@ -335,7 +369,7 @@ class ApiService {
 } // FIN DE ApiService
 
 // ==========================================
-// MODELOS
+// MODELOS (Incluidos aquí para facilitar la copia)
 // ==========================================
 class GrupoFisico {
   final int id;
@@ -351,12 +385,16 @@ class Grupo {
   final int grupoIdReal;
   final String nombre;
   final String materia;
+  // Podemos agregar profesorId si lo necesitas en el frontend
+  // final int profesorId;
+
   Grupo({
     required this.id,
     required this.grupoIdReal,
     required this.nombre,
     required this.materia,
   });
+
   factory Grupo.fromJson(Map<String, dynamic> json) {
     return Grupo(
       id: json['id'],

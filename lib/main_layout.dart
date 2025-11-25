@@ -113,7 +113,7 @@ class _MainLayoutState extends State<MainLayout> {
           color: Colors.white,
           child: Column(
             children: [
-              _buildDrawerHeader(),
+              _buildDrawerHeader(), // <--- Encabezado personalizado
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
@@ -181,55 +181,75 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
       ),
+
       body: _widgetOptions.elementAt(_selectedIndex),
     );
   }
 
+  // ------------------------------------------------------------------
+  // ENCABEZADO PERSONALIZADO (REEMPLAZO DE UserAccountsDrawerHeader)
+  // ------------------------------------------------------------------
   Widget _buildDrawerHeader() {
-    return UserAccountsDrawerHeader(
-      accountName: Text(
-        _nombreDisplay,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-      ),
-      accountEmail: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(_correoDisplay, style: const TextStyle(fontSize: 14)),
-          const SizedBox(height: 2),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              _rolDisplay.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-      currentAccountPicture: CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Text(
-          _nombreDisplay.isNotEmpty ? _nombreDisplay[0].toUpperCase() : 'A',
-          style: const TextStyle(
-            fontSize: 28,
-            color: Color(0xFF673AB7),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(top: 50, bottom: 20, left: 20, right: 20),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF673AB7), Color(0xFF9575CD)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. EL ICONO / AVATAR
+          CircleAvatar(
+            radius: 35, // Un poco más grande
+            backgroundColor: Colors.white,
+            child: Text(
+              _nombreDisplay.isNotEmpty ? _nombreDisplay[0].toUpperCase() : 'A',
+              style: const TextStyle(
+                fontSize: 30,
+                color: Color(0xFF673AB7),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          // 2. EL ESPACIO EXTRA QUE PEDISTE
+          const SizedBox(height: 25), // <--- Aquí controlas la separación
+          // 3. EL USUARIO Y TEXTO
+          Text(
+            _nombreDisplay,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            _correoDisplay,
+            style: const TextStyle(fontSize: 14, color: Colors.white70),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              _rolDisplay.toUpperCase(),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -268,14 +288,7 @@ class _MainLayoutState extends State<MainLayout> {
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        onTap: () async {
-          Navigator.pop(context); // cierra Drawer
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setInt('selectedIndex', index); // guarda índice
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
+        onTap: () => _onSelectItem(index),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );

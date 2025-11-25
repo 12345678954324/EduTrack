@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import 'detalles_materia_screen.dart';
 import 'student_dashboard_screen.dart';
 import 'package:app_calificaciones/main_layout.dart';
+import '/main_soporte.dart';
 
 class HistorialAcademicoScreen extends StatefulWidget {
   final int alumnoId;
@@ -119,11 +120,13 @@ class _HistorialAcademicoScreenState extends State<HistorialAcademicoScreen> {
           ),
         ],
       ),
-
+      // 🚨 BOTÓN FLOTANTE (NAVEGACIÓN)
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Abrir mensajería de EduTrack...")),
+          // ⚠️ CORRECCIÓN: Quitar 'const' si Solucion1Soporte es StatefulWidget
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => EdutrackSupportApp()),
           );
         },
         backgroundColor: Colors.orange,
